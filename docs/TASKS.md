@@ -27,8 +27,19 @@ Track progress with simple checkboxes. Mark [x] when done.
 ## Governance & Outputs
 - [x] Git-MCP client + local fallback
 - [x] pr prepare/link commands
-- [ ] actcli.toml (persist config like ollama_host)
-- [ ] Transcript writer + audit-lite toggle
+- [x] actcli.toml (persist config like ollama_host)
+- [x] Transcript writer + audit-lite toggle
 - [ ] Synthesis improvements (agreements/disagreements)
 - [ ] Unit tests and coverage (≥80% on new code)
 
+## Trust, Policy, and UX
+- [x] First-run wizard (minimal prompts)
+- [x] Trust store + /trust commands
+- [x] Cloud share guard + /share
+- [ ] Read/write allow/deny persistence to project config
+- [ ] Rich arrow-key wizard (TUI)
+
+## MCP Management
+- [x] mcp list/add/on/off/test/log/reload/restart
+- [ ] mcp stdio deep-test (spawn + handshake) with timeout
+- [ ] REPL /mcp ui (TUI)

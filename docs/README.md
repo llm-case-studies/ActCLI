@@ -13,5 +13,6 @@ Start here to explore ActCLI’s design and plans.
   - analysis/deepseek_markdown_20250918_425641.md
 - Integrations: ../Git-MCP.md (move to docs/integration/git-mcp.md when ready)
 - Tasks: ./TASKS.md
+- Status: ./STATUS.md
 
 Tip: Keep product docs here; large binaries and screenshots should live in releases or a dedicated assets folder.

@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 import httpx
 
 from ..git.local import LocalGit
+from .config import load_mcp_config, get_server_by_url
 
 
 class GitMCPClient:
@@ -21,10 +22,32 @@ class GitMCPClient:
     def _post(self, op: str, params: Dict) -> Dict:
         if not self.base_url:
             raise RuntimeError("No MCP URL configured")
+        # Enable logging if configured for this server
+        log_enabled = False
+        server_name = None
+        try:
+            cfg = load_mcp_config()
+            s = get_server_by_url(cfg, self.base_url)
+            if s:
+                log_enabled = s.log
+                server_name = s.name
+        except Exception:
+            pass
         with httpx.Client(timeout=10) as client:
             r = client.post(self.base_url, json={"op": op, "params": params})
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+            if log_enabled and server_name:
+                try:
+                    from pathlib import Path
+                    log_dir = Path("out/mcp-logs")
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    (log_dir / f"{server_name}.log").write_text(
+                        f"op={op}\nparams={params}\nresponse={data}\n\n", encoding="utf-8"
+                    )
+                except Exception:
+                    pass
+            return data
 
     # High-level operations with fallback
     def repo_detect(self) -> Dict:
@@ -103,4 +126,3 @@ class GitMCPClient:
         if remote_url:
             return self.local.pr_url(remote_url, target_branch, branch, title=title, body=body)
         return None
-
