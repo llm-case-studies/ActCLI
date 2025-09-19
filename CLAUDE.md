@@ -15,6 +15,14 @@ pip install -e .
 actcli doctor
 ```
 
+**Interactive UI (VSCode-style interface):**
+```bash
+actcli                        # Default VSCode-style interface
+ACTCLI_LAYOUT=vscode actcli   # Explicit VSCode layout
+ACTCLI_LAYOUT=claude actcli   # Claude CLI-style layout
+ACTCLI_LAYOUT=basic actcli    # Basic terminal layout
+```
+
 **Linting and formatting (from AGENTS.md):**
 ```bash
 ruff check src tests
@@ -47,6 +55,10 @@ ActCLI is a terminal-native toolkit for actuarial workflows with multi-model "ro
 **Core Structure:**
 - `src/actcli/cli.py` - Main Typer-based CLI entry point
 - `src/actcli/commands/` - Individual command implementations (chat, doctor, auth, models, pr)
+- `src/actcli/ui/` - Terminal user interface implementations
+  - `vscode_layout.py` - VSCode-style interface with sidebar and themes
+  - `claude_layout.py` - Claude CLI-inspired minimal layout
+  - `enhanced_layout.py` - Advanced UI examples and components
 - `src/actcli/seminar/` - Multi-model coordination system
   - `coordinator.py` - Orchestrates concurrent model responses
   - `synthesizer.py` - Combines multi-round discussions
@@ -60,6 +72,9 @@ ActCLI is a terminal-native toolkit for actuarial workflows with multi-model "ro
 - Local model storage under `./models` directory for project isolation
 - Rich console output with `--no-color` support throughout
 - Environment variable `ACTCLI_MODE` controls hybrid vs offline behavior
+- **UI System**: `prompt_toolkit` Application framework for full-screen terminal control
+- **Layout Selection**: Environment variable `ACTCLI_LAYOUT` (vscode/claude/basic)
+- **Theme Support**: Dynamic color schemes (dark/light/nord) with real-time switching
 
 **Multi-Model Chat Flow:**
 1. Parse comma-separated provider list (e.g., "llama3,claude,gpt")

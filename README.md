@@ -1,6 +1,29 @@
 # ActCLI (prototype)
 
-ActCLI is a terminal‑native toolkit for actuarial workflows with a multi‑model "roundtable" chat. This scaffold demonstrates the WOW path: concurrent responses from multiple models, a second round that references peers, and a simple synthesis. It also includes a first‑run doctor and stubbed auth.
+ActCLI is a terminal‑native toolkit for actuarial workflows with a multi‑model "roundtable" chat featuring a **VSCode-style interface**. This scaffold demonstrates the WOW path: concurrent responses from multiple models, a second round that references peers, and a simple synthesis. It also includes a first‑run doctor and stubbed auth.
+
+## 🎨 User Interface
+
+ActCLI features a professional **VSCode-style terminal interface** with:
+
+- **Left Sidebar (25%)**: Expandable sections for models, themes, MCP servers, locations
+- **ASCII Art Logo**: "ActCLI - Actuarial CLI"
+- **Right Chat Area (75%)**: Conversation history and input
+- **Theme Switching**: Dark, Light, Nord themes (Ctrl+T)
+- **Model Management**: See available vs active models in roundtable
+- **Keyboard Navigation**: Arrow keys, text selection, copy functionality
+
+Start the interactive interface with:
+```bash
+actcli  # Enters VSCode-style chat interface
+```
+
+Or choose specific layouts:
+```bash
+ACTCLI_LAYOUT=vscode actcli    # VSCode-style (default)
+ACTCLI_LAYOUT=claude actcli    # Claude CLI-style
+ACTCLI_LAYOUT=basic actcli     # Basic terminal
+```
 
 ## Quickstart
 
@@ -30,6 +53,8 @@ Notes
 
 - Start here: `docs/README.md`
 - Task checklist: `docs/TASKS.md`
+- **UI Layouts**: `docs/LAYOUTS.md` - VSCode-style interface guide
+- **UI Implementation**: `docs/UI_IMPROVEMENTS.md` - Technical details
 
 ## Local models in this repo
 

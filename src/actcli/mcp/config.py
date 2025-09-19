@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from platformdirs import user_config_dir
 
@@ -13,9 +13,17 @@ except Exception:  # pragma: no cover
 
 
 GLOBAL_DIR = Path(user_config_dir("actcli", "actcli")) / "mcp"
-PROJECT_DIR = Path.cwd() / ".actcli"
 GLOBAL_FILE = GLOBAL_DIR / "servers.toml"
-PROJECT_FILE = PROJECT_DIR / "mcp.toml"
+
+
+def get_project_dir() -> Path:
+    """Get the project .actcli directory based on current working directory."""
+    return Path.cwd() / ".actcli"
+
+
+def get_project_file() -> Path:
+    """Get the project mcp.toml file path based on current working directory."""
+    return get_project_dir() / "mcp.toml"
 
 
 @dataclass
@@ -56,28 +64,32 @@ def _load_file(path: Path) -> Dict[str, MCPServer]:
 
 def load_mcp_config() -> MCPConfig:
     GLOBAL_DIR.mkdir(parents=True, exist_ok=True)
-    PROJECT_DIR.mkdir(parents=True, exist_ok=True)
+    get_project_dir().mkdir(parents=True, exist_ok=True)
     global_servers = _load_file(GLOBAL_FILE)
-    project_servers = _load_file(PROJECT_FILE)
+    project_servers = _load_file(get_project_file())
     merged = {**global_servers, **project_servers}
     return MCPConfig(servers=merged)
 
 
 def save_project_mcp_config(cfg: MCPConfig) -> None:
-    PROJECT_DIR.mkdir(parents=True, exist_ok=True)
-    # Only persist project-level servers (subset of merged)
-    data = {"servers": {}}
+    get_project_dir().mkdir(parents=True, exist_ok=True)
+    # Manually write TOML to avoid requiring a writer library (tomllib has no dumps)
+    lines: list[str] = []
     for name, s in cfg.servers.items():
-        data["servers"][name] = {
-            "url": s.url,
-            "enabled": s.enabled,
-            "group": s.group,
-            "desc": s.desc,
-            "log": s.log,
-            "reload_url": s.reload_url,
-            "restart_cmd": s.restart_cmd,
-        }
-    PROJECT_FILE.write_text(toml.dumps(data), encoding="utf-8")
+        lines.append(f"[servers.{name}]")
+        lines.append(f"url = \"{s.url}\"")
+        lines.append(f"enabled = {str(bool(s.enabled)).lower()}")
+        if s.group is not None:
+            lines.append(f"group = \"{s.group}\"")
+        if s.desc is not None:
+            lines.append(f"desc = \"{s.desc}\"")
+        lines.append(f"log = {str(bool(s.log)).lower()}")
+        if s.reload_url is not None:
+            lines.append(f"reload_url = \"{s.reload_url}\"")
+        if s.restart_cmd is not None:
+            lines.append(f"restart_cmd = \"{s.restart_cmd}\"")
+        lines.append("")
+    get_project_file().write_text("\n".join(lines), encoding="utf-8")
 
 
 def get_server_by_url(cfg: MCPConfig, url: str) -> Optional[MCPServer]:
@@ -85,4 +97,3 @@ def get_server_by_url(cfg: MCPConfig, url: str) -> Optional[MCPServer]:
         if s.url.rstrip("/") == url.rstrip("/"):
             return s
     return None
-

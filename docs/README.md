@@ -14,5 +14,8 @@ Start here to explore ActCLI’s design and plans.
 - Integrations: ../Git-MCP.md (move to docs/integration/git-mcp.md when ready)
 - Tasks: ./TASKS.md
 - Status: ./STATUS.md
+- MCP Setup: ./MCP_SETUP.md
+- **UI Layouts**: ./LAYOUTS.md - VSCode-style interface guide
+- **UI Implementation**: ./UI_IMPROVEMENTS.md - Technical implementation details
 
 Tip: Keep product docs here; large binaries and screenshots should live in releases or a dedicated assets folder.
