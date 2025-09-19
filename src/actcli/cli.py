@@ -43,18 +43,10 @@ def _first_run_banner_if_needed() -> None:
 def _root(ctx: typer.Context):
     global _CONFIG, _CONFIG_PATH
     if ctx.invoked_subcommand is None:
-        _first_run_banner_if_needed()
-        # First-run wizard if no project config and no trust
-        has_proj_cfg = _CONFIG_PATH is not None
-        has_trust = get_trust() is not None
-        if not has_proj_cfg or not has_trust:
-            from .commands.wizard import run_wizard
-            run_wizard()
-            # reload config after wizard
-            _CONFIG, _CONFIG_PATH = load_config()
-        # Auto-enter REPL
+        # Just go straight to chat - keep it simple!
+        console.print(_status_header())
         from .commands.chat import run_chat_repl
-        run_chat_repl(initial_multi=_CONFIG.defaults.models if _CONFIG else "llama3,claude,gpt", rounds=2, timeout_s=25, ollama_host=_CONFIG.defaults.ollama_host if _CONFIG else None)
+        run_chat_repl(initial_multi="llama3,claude,gpt", rounds=2, timeout_s=25, ollama_host=None)
 
 
 @app.command()
@@ -86,24 +78,27 @@ def auth(
 
 @app.command()
 def chat(
-    prompt: str = typer.Option("", "--prompt", "-p", help="User prompt (single turn)"),
-    multi: str = typer.Option(_CONFIG.defaults.models if _CONFIG else "llama3,claude,gpt", "--multi", help="Comma-separated provider IDs: llama3, claude, gpt, gemini"),
+    prompt: str = typer.Option("", "--prompt", "-p", help="User prompt (single turn, otherwise interactive)"),
+    multi: str = typer.Option("llama3,claude,gpt", "--multi", help="Comma-separated provider IDs: llama3, claude, gpt, gemini"),
     rounds: int = typer.Option(2, "--rounds", min=1, max=3, help="Number of discussion rounds (1-3)"),
     timeout_s: int = typer.Option(25, "--timeout-s", help="Per-call timeout seconds"),
-    ollama_host: Optional[str] = typer.Option(_CONFIG.defaults.ollama_host if _CONFIG else None, "--ollama-host", help="Override Ollama base URL, e.g., http://127.0.0.1:11435"),
+    ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="Override Ollama base URL, e.g., http://127.0.0.1:11435"),
     save: Optional[str] = typer.Option(None, "--save", help="Save transcript markdown to path (e.g., out/seminar.md)"),
     audit: Optional[str] = typer.Option(None, "--audit", help="Save audit-lite JSON to path (e.g., out/seminar_audit.json)"),
     presenter_state: Optional[str] = typer.Option(None, "--presenter-state", help="Write presenter state JSON (e.g., out/presenter/state.json)"),
-    repl: bool = typer.Option(False, "--repl", help="Start an interactive REPL that supports slash commands"),
 ) -> None:
-    """Run a brief multi-model roundtable (prototype)."""
+    """Multi-model chat: interactive by default, or one-shot with --prompt."""
     from .commands.chat import run_roundtable, run_chat_repl
 
     console.print(_status_header())
-    if repl:
-        run_chat_repl(initial_multi=multi, rounds=rounds, timeout_s=timeout_s, ollama_host=ollama_host)
+
+    # Simple logic: if prompt given, do one-shot; otherwise interactive
+    if prompt:
+        run_roundtable(prompt=prompt, multi=multi, rounds=rounds, timeout_s=timeout_s,
+                      ollama_host=ollama_host, save=save, audit=audit, presenter_state=presenter_state)
     else:
-        run_roundtable(prompt=prompt, multi=multi, rounds=rounds, timeout_s=timeout_s, ollama_host=ollama_host, save=save, audit=audit, presenter_state=presenter_state)
+        # Interactive chat (what most people want)
+        run_chat_repl(initial_multi=multi, rounds=rounds, timeout_s=timeout_s, ollama_host=ollama_host)
 
 
 @app.command()
