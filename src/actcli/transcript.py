@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -23,7 +23,7 @@ def write_transcript_md(
     results: List[TurnResult],
     synthesis: Optional[str] = None,
 ) -> None:
-    lines = ["# ActCLI Roundtable", "", f"> {header}", "", f"## Prompt", "", f"{prompt}", "", "## Responses", ""]
+    lines = ["# ActCLI Roundtable", "", f"> {header}", "", "## Prompt", "", f"{prompt}", "", "## Responses", ""]
     for r in results:
         lines.append(f"### {r.info.name} ({'local' if r.info.is_local else 'cloud'}) — {r.latency_ms} ms")
         lines.append("")
@@ -46,7 +46,7 @@ def write_audit_json(
 ) -> None:
     data = {
         "actcli_version": "0.0.1",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         "prompt_len": len(prompt or ""),
         "participants": [
             {"id": r.info.id, "local": r.info.is_local, "version": r.info.model_version} for r in results
@@ -68,7 +68,7 @@ def write_audit_json(
 
 def write_presenter_state(path: Path, *, prompt: str, results: List[TurnResult], synthesis: Optional[str], disagreement: Optional[float]) -> None:
     payload = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         "prompt": prompt,
         "results": [
             {
