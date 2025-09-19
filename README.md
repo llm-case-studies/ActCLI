@@ -26,6 +26,11 @@ Notes
 - `doctor` prints a concise readiness summary to build user confidence on first run.
 - Auth supports API key envs now; OAuth device/PKCE will be added via provider plugins.
 
+## Docs
+
+- Start here: `docs/README.md`
+- Task checklist: `docs/TASKS.md`
+
 ## Local models in this repo
 
 Run a project-scoped Ollama server that stores models under `./models`:
@@ -43,4 +48,3 @@ Run a project-scoped Ollama server that stores models under `./models`:
   - `scripts/fresh.sh chat --prompt "Compare approaches" --multi "codellama:34b,gpt-oss:20b,codellama:13b"`
 - Fresh reset and list models:
   - `scripts/fresh.sh models list`
-

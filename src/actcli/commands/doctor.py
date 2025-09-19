@@ -10,6 +10,7 @@ from typing import List
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 
 console = Console()
@@ -64,3 +65,30 @@ def run_doctor() -> None:
     console.print(Panel(table, border_style="cyan"))
     console.print("Tip: run 'actcli auth login <provider>' to configure cloud models.")
 
+
+def build_doctor_lite_panel() -> Panel:
+    """Return a compact, elegant health certificate panel."""
+    items = []
+    # Python / TTY / Color
+    py = platform.python_version()
+    tty = "yes" if console.is_terminal else "no"
+    color = console.color_system or "none"
+    items.append(f"Python {py} • TTY: {tty} • Color: {color}")
+    # Ollama
+    if shutil.which("ollama"):
+        code, out = _run(["ollama", "--version"])
+        stat = "ok" if code == 0 else "warn"
+        ver = out.splitlines()[0] if out else "?"
+        items.append(f"Ollama: {stat} ({ver})")
+    else:
+        items.append("Ollama: not found")
+    # API keys
+    keys = [k for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY") if os.getenv(k)]
+    items.append(f"API keys: {len(keys)} set")
+
+    txt = Text()
+    for i, line in enumerate(items):
+        style = "green" if ("ok" in line or line.startswith("Python")) else "yellow"
+        txt.append("• ", style="bright_black")
+        txt.append(line + ("\n" if i < len(items) - 1 else ""), style=style)
+    return Panel(txt, title="Health Check", border_style="cyan")

@@ -1,0 +1,10 @@
+[project]
+name = "ActCLI"
+version = "0.1"
+
+[defaults]
+mode = "offline"
+audit_level = "off-lite"
+seed = 42
+output_dir = "out"
+models = "llama3,claude,gpt"
