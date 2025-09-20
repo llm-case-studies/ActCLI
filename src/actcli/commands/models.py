@@ -47,6 +47,60 @@ def list_models(ollama_host: Optional[str]) -> None:
     console.print(Panel(table, border_style="cyan"))
 
 
+def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: Optional[str] = None) -> None:
+    """List models for a provider (ollama|openai|anthropic|google).
+
+    Falls back to curated lists for providers that don't expose listing or when unauthenticated.
+    """
+    from ..models.registry import list_models_ollama, list_models_openai, list_models_anthropic, list_models_google, list_models_claude_cli
+    import os
+
+    provider = provider.lower()
+    models: List[dict] = []
+    title = f"Models • {provider}"
+    try:
+        if provider == "ollama":
+            host = _resolve_host(ollama_host)
+            rows = list_models_ollama(host)
+            models = [{"name": m.model_id} for m in rows]
+            title += f" @ {host}"
+        elif provider == "openai":
+            key = os.getenv("OPENAI_API_KEY", "")
+            rows = list_models_openai(key, refresh=refresh)
+            models = [{"name": m.model_id} for m in rows]
+        elif provider == "anthropic":
+            key = os.getenv("ANTHROPIC_API_KEY", "")
+            rows = list_models_anthropic(key, refresh=refresh)
+            models = [{"name": m.model_id} for m in rows]
+        elif provider == "google":
+            key = os.getenv("GOOGLE_API_KEY", "")
+            rows = list_models_google(key, refresh=refresh)
+            models = [{"name": m.model_id} for m in rows]
+        elif provider == "claude_cli":
+            rows = list_models_claude_cli(refresh=refresh)
+            models = [{"name": m.model_id, "description": m.display_name} for m in rows]
+        else:
+            console.print(Panel(f"Unknown provider: {provider}", border_style="red"))
+            return
+    except Exception as e:
+        console.print(Panel(str(e), title=f"{provider} listing error", border_style="red"))
+        return
+
+    table = Table(title=title, show_header=True, header_style="bold")
+    table.add_column("Name", style="cyan")
+
+    # Add description column for providers that have it
+    has_descriptions = any(m.get("description") for m in models)
+    if has_descriptions:
+        table.add_column("Description", style="dim")
+        for m in models:
+            table.add_row(m.get("name", ""), m.get("description", ""))
+    else:
+        for m in models:
+            table.add_row(m.get("name", ""))
+    console.print(Panel(table, border_style="cyan"))
+
+
 def pull_models(ollama_host: Optional[str], ids: Optional[List[str]], use_default: bool) -> None:
     host = _resolve_host(ollama_host)
     targets = ids if ids else (DEFAULT_MODELS if use_default else [])
