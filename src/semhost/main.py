@@ -11,6 +11,8 @@ from .routers import models as models_router
 from .routers import providers as providers_router
 from .routers import sessions as sessions_router
 from .routers import ws as ws_router
+from .routers import mcp as mcp_router
+from .routers import locations as locations_router
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
@@ -33,6 +35,8 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(providers_router.router)
     app.include_router(sessions_router.router)
     app.include_router(ws_router.router)
+    app.include_router(mcp_router.router)
+    app.include_router(locations_router.router)
 
     # Ephemeral state: reset status on app creation (Sprint 1)
     _deps.reset_status()

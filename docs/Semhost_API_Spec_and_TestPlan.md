@@ -1,18 +1,20 @@
 # Semhost (FastAPI) — API, Docs, and Test Plan
 
 Progress Tracker (copy/paste into issue)
-- [ ] Semhost skeleton running on 127.0.0.1:7530
-- [ ] OpenAPI docs exposed at /openapi.json, /docs, /redoc
-- [ ] Status: GET/PATCH /status (mode, cloud_share, window_k, max_rounds, read/write)
-- [ ] Models: GET /models (aggregated local/api/cli with Source/Auth badges)
-- [ ] Providers doctor: GET /providers/doctor, POST /auth/cli/login
+- [x] Semhost skeleton running on 127.0.0.1:7530
+- [x] OpenAPI docs exposed at /openapi.json, /docs, /redoc
+- [x] Status: GET/PATCH /status (mode, cloud_share, window_k, max_rounds, read/write)
+- [x] Models: GET /models (aggregated local/api/cli with Source/Auth badges)
+- [x] Providers doctor: GET /providers/doctor, POST /auth/cli/login
 - [ ] SPA shell (VSCode layout): Sidebar + Models + Status pages
-- [ ] Sessions: POST/GET/PATCH /sessions
-- [ ] Rounds: POST /sessions/{id}/round/start + /round/next
-- [ ] Streaming: WS /sessions/{id}/stream (round lifecycle events)
-- [ ] Persistence parity: out/sessions/<id>/session.json + round-<n>.json
-- [ ] MCP: GET/PATCH /mcp; SPA toggles
-- [ ] Locations editor (read/write) with PATCH/GET
+- [x] Sessions: POST/GET/PATCH /sessions
+- [x] Rounds: POST /sessions/{id}/round/start + /round/next
+- [x] Streaming: WS /sessions/{id}/stream (round lifecycle events)
+- [x] Persistence parity: out/sessions/<id>/session.json + round-<n>.json
+- [x] MCP: GET/PATCH /mcp
+- [ ] SPA toggles
+- [x] Locations API (GET/PATCH)
+- [ ] Locations editor (SPA)
 - [ ] Formats catalog: GET /formats + SPA cards (round_robin, delphi_lite, cec)
 - [ ] Synthesis panel (summary + disagreement)
 - [ ] CLI integration prefers semhost, falls back to in-proc
@@ -74,7 +76,8 @@ Status
 
 Models
 - `GET /models` → `ModelItem[]`
-  - ModelItem: `{ provider, id, source: 'local'|'cloud(api)'|'cloud(cli)', auth: 'local'|'env'|'cli'|'oauth'|'none', available: bool, description? }`
+  - ModelItem (compat): `{ provider, id, source, auth, available, description?, blocked_reason? }`
+  - Enriched: `{ auth_mechanism, auth_state: 'ready'|'missing'|'signed_out'|'unauthorized'|'unknown', policy_allowed: bool, policy_reason?: 'offline'|'cloud_share_disabled', hint? }`
   - Aggregates: ollama, openai, anthropic, google, claude_cli, codex_cli (later: openai_compat, azure_openai)
 
 Providers (CLI)
@@ -161,26 +164,30 @@ Coverage & Determinism
 ## Checklists (Sprints)
 
 Sprint 1 — Shell & Models
-- [ ] FastAPI app scaffold; bind 127.0.0.1:7530
-- [ ] `/openapi.json`, `/docs`, `/redoc` exposed (custom title)
-- [ ] `GET /health`, `GET/PATCH /status` (MODE, cloud_share, window_k, max_rounds, read/write)
-- [ ] `GET /models` aggregated (local/api/cli), using existing registry logic
-- [ ] `GET /providers/doctor` (codex/claude probes)
+- [x] FastAPI app scaffold; bind 127.0.0.1:7530
+- [x] `/openapi.json`, `/docs`, `/redoc` exposed (custom title)
+- [x] `GET /health`, `GET/PATCH /status` (MODE, cloud_share, window_k, max_rounds, read/write)
+- [x] `GET /models` aggregated (local/api/cli), using existing registry logic
+- [x] `GET /providers/doctor` (codex/claude probes)
 - [ ] SPA shell (VSCode layout): Sidebar + Models + Status pages
-- [ ] Tests: unit for routes, CLI probe parsing; SPA smoke
+- [x] Tests: unit for routes, CLI probe parsing; SPA smoke
 
 Sprint 2 — Sessions & Rounds
-- [ ] `POST /sessions`, `GET/PATCH /sessions/{id}`; validation
-- [ ] `POST /sessions/{id}/round/start`; `.../round/next`
-- [ ] WS `/sessions/{id}/stream` eventing
-- [ ] Persistence to `out/sessions/<id>`; parity with CLI artifacts
+- [x] `POST /sessions`, `GET/PATCH /sessions/{id}`; validation
+- [x] `POST /sessions/{id}/round/start`; `.../round/next`
+- [x] WS `/sessions/{id}/stream` eventing
+- [x] Persistence to `out/sessions/<id>`; parity with CLI artifacts
 - [ ] SPA: Participants editor (bounds), Format selector (cards), Prompt area, Live grid
-- [ ] Tests: orchestrator integration; WS sequence; SPA e2e (start/next)
+- [x] Tests: orchestrator integration; WS sequence
+- [ ] Tests: SPA e2e (start/next)
 
 Sprint 3 — MCP & Locations
-- [ ] `GET/PATCH /mcp`; UI toggles
-- [ ] Locations editor (read/write globs) with PATCH/GET
-- [ ] Tests: API CRUD; SPA interactions
+- [x] `GET/PATCH /mcp`
+- [ ] UI toggles
+- [x] Locations API (GET/PATCH)
+- [ ] Locations editor (SPA)
+- [x] Tests: API CRUD
+- [ ] Tests: SPA interactions
 
 Sprint 4 — Presets & Polish
 - [ ] `/formats` catalog; apply presets (delphi_lite, cec)
