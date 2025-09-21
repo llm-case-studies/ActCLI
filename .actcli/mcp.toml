@@ -1,0 +1,4 @@
+[servers.test]
+url = "http://svc"
+enabled = true
+log = true

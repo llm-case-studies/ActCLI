@@ -4,7 +4,6 @@ import random
 import textwrap
 from typing import Optional
 
-from .base import ModelAdapter
 
 
 class EchoAdapter:
@@ -24,6 +23,7 @@ class EchoAdapter:
         *,
         system: str = "",
         seed: Optional[int] = None,
+        temperature: Optional[float] = None,
         timeout_s: int = 30,
         round_index: int = 1,
         context_snippets: Optional[str] = None,
@@ -41,5 +41,7 @@ class EchoAdapter:
                 quoted = textwrap.shorten(context_snippets.replace("\n", " "), width=160, placeholder="…")
                 parts.append(f"Considering: \"{quoted}\"")
             parts.append("One next check: validate assumptions with a small sample.")
-        return "\n".join(parts)
-
+        out = "\n".join(parts)
+        if temperature is not None:
+            out += f"\n(temp={temperature:.2f})"
+        return out

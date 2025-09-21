@@ -13,7 +13,7 @@ from platformdirs import user_config_dir
 
 
 CACHE_DIR = Path(user_config_dir("actcli", "actcli")) / "cache" / "models"
-CLOUD_PROVIDERS = {"openai", "anthropic", "google", "claude_cli"}
+CLOUD_PROVIDERS = {"openai", "anthropic", "google", "claude_cli", "codex_cli"}
 
 
 @dataclass
@@ -225,3 +225,28 @@ def list_models_claude_cli(refresh: bool = False) -> List[ModelDescriptor]:
     cache_write("claude_cli", {"models": [vars(m) for m in known_models]})
     return known_models
 
+
+def list_models_codex_cli(refresh: bool = False) -> List[ModelDescriptor]:
+    """List Codex CLI available model(s).
+
+    Codex CLI typically uses a session-selected default model; we expose a single
+    descriptor and guide users to `codex /model` to switch interactively.
+    """
+    cache = cache_read("codex_cli")
+    if not refresh and not is_stale(cache):
+        return [ModelDescriptor(**m) for m in cache.get("models", [])]
+
+    if not shutil.which("codex"):
+        return []
+
+    models = [
+        ModelDescriptor(
+            provider="codex_cli",
+            model_id="default",
+            display_name="Codex CLI default (select via 'codex /model')",
+            capabilities={"generate": True},
+            cost_tier="subscription",
+        )
+    ]
+    cache_write("codex_cli", {"models": [vars(m) for m in models]})
+    return models

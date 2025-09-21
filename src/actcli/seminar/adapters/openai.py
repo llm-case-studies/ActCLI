@@ -5,7 +5,6 @@ from typing import Optional
 
 import httpx
 
-from .base import ModelAdapter
 
 
 class OpenAIAdapter:
@@ -15,8 +14,22 @@ class OpenAIAdapter:
         self.is_local = False
         self.model_version = model
         self._api_key = os.getenv("OPENAI_API_KEY")
-        if not self._api_key:
-            raise RuntimeError("OPENAI_API_KEY not set")
+        # OAuth token (if user logged in via PKCE)
+        try:
+            from ..auth.store import CredentialStore  # type: ignore
+        except Exception:
+            CredentialStore = None
+        self._oauth_token = None
+        if CredentialStore is not None:
+            try:
+                store = CredentialStore()
+                cred = store.get("openai_oauth")
+                if cred and cred.token:
+                    self._oauth_token = cred.token
+            except Exception:
+                pass
+        if not self._api_key and not self._oauth_token:
+            raise RuntimeError("OpenAI auth missing (set OPENAI_API_KEY or login with PKCE)")
 
     def generate(
         self,
@@ -24,6 +37,7 @@ class OpenAIAdapter:
         *,
         system: str = "",
         seed: Optional[int] = None,
+        temperature: Optional[float] = None,
         timeout_s: int = 30,
         round_index: int = 1,
         context_snippets: Optional[str] = None,
@@ -46,12 +60,17 @@ class OpenAIAdapter:
         # OpenAI may support seed for determinism in some models; include if provided
         if seed is not None:
             payload["seed"] = int(seed)
+        if temperature is not None:
+            try:
+                payload["temperature"] = float(temperature)
+            except Exception:
+                pass
 
-        headers = {"Authorization": f"Bearer {self._api_key}"}
+        token = self._oauth_token or self._api_key
+        headers = {"Authorization": f"Bearer {token}"}
         with httpx.Client(timeout=timeout_s) as client:
             r = client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
             r.raise_for_status()
             data = r.json()
             text = data["choices"][0]["message"]["content"].strip()
             return text
-

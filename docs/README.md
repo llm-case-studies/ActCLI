@@ -15,6 +15,8 @@ Start here to explore ActCLI’s design and plans.
 - Tasks: ./TASKS.md
 - Status: ./STATUS.md
 - MCP Setup: ./MCP_SETUP.md
+- Architecture: ./ARCHITECTURE.md
+ - Events & Hooks: ./EVENTS.md
 - **UI Layouts**: ./LAYOUTS.md - VSCode-style interface guide
 - **UI Implementation**: ./UI_IMPROVEMENTS.md - Technical implementation details
 

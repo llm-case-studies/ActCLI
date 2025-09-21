@@ -35,6 +35,8 @@ ACTCLI_LAYOUT=basic actcli     # Basic terminal
   - `actcli doctor`
 - Roundtable demo:
   - `actcli chat --prompt "Compare reserving strategies" --multi llama3,claude,gpt --rounds 2`
+  - Advanced multi-specs (alias/provider/model/params):
+    - `actcli chat --prompt "Compare" --multi "llamaA=ollama:llama3:8b?seed=42, gpt4o=openai:gpt-4o, claude=anthropic:claude-3-haiku-20240307"`
 - Auth status (API keys via env):
   - `actcli auth status`
 
@@ -55,6 +57,8 @@ Notes
 - Task checklist: `docs/TASKS.md`
 - **UI Layouts**: `docs/LAYOUTS.md` - VSCode-style interface guide
 - **UI Implementation**: `docs/UI_IMPROVEMENTS.md` - Technical details
+- **Providers & Auth**: `docs/Providers_Auth_and_CLI.md` - API keys vs vendor CLIs, aggregated listing, providers doctor, and unlimited rounds controls
+- **Semhost API & Tests**: `docs/Semhost_API_Spec_and_TestPlan.md` - FastAPI backend surface, OpenAPI docs, and test plan/checklists
 
 ## Local models in this repo
 
@@ -62,7 +66,11 @@ Run a project-scoped Ollama server that stores models under `./models`:
 
 - Start server: `scripts/ollama-local.sh serve` (port 11435; models in `./models`)
 - Pull defaults: `scripts/ollama-local.sh pull-all` (codellama:34b, gpt-oss:20b, codellama:13b, llama3:8b, llama3.2:3b)
-- List via CLI: `actcli models list --ollama-host http://127.0.0.1:11435`
+- List via CLI (ollama): `actcli models list --ollama-host http://127.0.0.1:11435`
+- Cloud listings (cached, offline-friendly):
+  - `actcli models list --provider openai --refresh`
+  - `actcli models list --provider anthropic`
+  - `actcli models list --provider google --refresh`
 - Use in chat: `actcli chat --multi "codellama:34b,gpt-oss:20b,codellama:13b" --rounds 2 --ollama-host http://127.0.0.1:11435`
 
 ### One-shot runner (fresh start + action)

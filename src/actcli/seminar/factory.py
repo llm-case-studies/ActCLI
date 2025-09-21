@@ -7,6 +7,7 @@ from .adapters.base import ModelAdapter
 from .adapters.ollama import OllamaAdapter
 from .adapters.openai import OpenAIAdapter
 from .adapters.anthropic import AnthropicAdapter
+from .adapters.codex_cli import CodexCLIAdapter
 from .adapters.claude_cli import ClaudeCLIAdapter
 from .adapters.gemini import GeminiAdapter
 from .adapters.echo import EchoAdapter
@@ -99,6 +100,9 @@ class AdapterFactory:
             elif provider == "claude_cli":
                 # Claude CLI uses subscription auth - always allowed since it's user's own subscription
                 base = ClaudeCLIAdapter(model=spec.model_id or "claude-3-5-sonnet-20241022")
+            elif provider == "codex_cli":
+                # OpenAI Codex CLI (subscription-backed); model id is a label only
+                base = CodexCLIAdapter(model=spec.model_id or "default")
             elif provider == "google":
                 if not allow_cloud:
                     return BoundAdapter(EchoAdapter(name=f"{alias or spec.model_id}(cloud-blocked)"), alias=alias or "google", params=params)

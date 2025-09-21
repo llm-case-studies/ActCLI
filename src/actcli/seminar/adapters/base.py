@@ -15,6 +15,7 @@ class ModelAdapter(Protocol):
         *,
         system: str = "",
         seed: Optional[int] = None,
+        temperature: Optional[float] = None,
         timeout_s: int = 30,
         round_index: int = 1,
         context_snippets: Optional[str] = None,
@@ -27,4 +28,3 @@ class AdapterInfo:
     name: str
     is_local: bool
     model_version: str
-

@@ -8,8 +8,6 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.rule import Rule
-from rich import box
 import httpx
 
 from ..seminar.adapters.echo import EchoAdapter
@@ -19,10 +17,14 @@ from ..seminar.adapters.anthropic import AnthropicAdapter
 from ..seminar.adapters.gemini import GeminiAdapter
 from ..seminar.coordinator import run_round, TurnResult
 from ..seminar.synthesizer import summarize
+from ..seminar.rounds import RoundOrchestrator
+from ..seminar.moods import resolve_mood, apply_mood
 from ..transcript import write_transcript_md, write_audit_json, write_presenter_state
 from ..policy import Policy, merge_policy
 from ..ui.select import select_one
 from ..mcp.config import load_mcp_config, save_project_mcp_config
+from ..models.participant import parse_participant_spec
+from ..seminar.factory import AdapterFactory
 
 
 console = Console()
@@ -31,38 +33,15 @@ console = Console()
 def _resolve_adapters(multi: str, ollama_host: str | None = None, allow_cloud: bool = True):
     ids = [x.strip() for x in multi.split(",") if x.strip()]
     adapters = []
-    for i in ids:
-        # Local models via Ollama if available; otherwise echo fallback
-        if i.startswith("llama") or i.startswith("mistral") or i.startswith("qwen") or ":" in i:
-            try:
-                adapters.append(OllamaAdapter(model=i, host=ollama_host))
-                continue
-            except Exception:
-                # Fallback to echo if Ollama not reachable
-                pass
-        # Cloud placeholders for now
-        if i == "gpt" and allow_cloud:
-            try:
-                adapters.append(OpenAIAdapter())
-                continue
-            except Exception:
-                adapters.append(EchoAdapter(name="gpt(cloud)"))
-                continue
-        if i == "claude" and allow_cloud:
-            try:
-                adapters.append(AnthropicAdapter())
-                continue
-            except Exception:
-                adapters.append(EchoAdapter(name="claude(cloud)"))
-                continue
-        if i == "gemini" and allow_cloud:
-            try:
-                adapters.append(GeminiAdapter())
-                continue
-            except Exception:
-                adapters.append(EchoAdapter(name="gemini(cloud)"))
-                continue
-        adapters.append(EchoAdapter(name=i))
+    for tok in ids:
+        try:
+            spec = parse_participant_spec(tok, default_ollama_host=ollama_host)
+        except Exception:
+            # Fallback to legacy echo participant
+            adapters.append(EchoAdapter(name=tok))
+            continue
+        a = AdapterFactory.from_spec(spec, allow_cloud=allow_cloud)
+        adapters.append(a)
     return adapters
 
 
@@ -131,7 +110,7 @@ def run_roundtable(
         write_presenter_state(Path(presenter_state), prompt=prompt, results=final_results, synthesis=syn, disagreement=disagree)
 
 
-def run_chat_repl(initial_multi: str, rounds: int, timeout_s: int, ollama_host: str | None = None) -> None:
+def run_chat_repl(initial_multi: str, rounds: int, timeout_s: int, ollama_host: str | None = None, *, max_rounds: int | None = None, round_window: int = 2) -> None:
     """Enhanced REPL with VSCode-style or Claude CLI-style layout."""
     # Check for layout preference
     import os
@@ -140,10 +119,10 @@ def run_chat_repl(initial_multi: str, rounds: int, timeout_s: int, ollama_host: 
     try:
         if layout_style == "vscode":
             from ..ui.vscode_layout import create_vscode_actcli
-            return run_vscode_style_repl(initial_multi, rounds, timeout_s, ollama_host)
+            return run_vscode_style_repl(initial_multi, rounds, timeout_s, ollama_host, max_rounds=max_rounds, round_window=round_window)
         elif layout_style == "claude":
             from ..ui.claude_layout import create_claude_style_repl
-            return run_claude_style_repl(initial_multi, rounds, timeout_s, ollama_host)
+            return run_claude_style_repl(initial_multi, rounds, timeout_s, ollama_host, max_rounds=max_rounds, round_window=round_window)
         else:
             return run_basic_repl(initial_multi, rounds, timeout_s, ollama_host)
     except ImportError:
@@ -159,44 +138,165 @@ def run_vscode_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollam
     models: list[str] = [x.strip() for x in initial_multi.split(",") if x.strip()] or ["llama3", "claude", "gpt"]
     policy: Policy = merge_policy()
 
+    # Unlimited rounds scaffold: orchestrator prepared but not yet driving execution
+    orchestrator = RoundOrchestrator(window_k=round_window, max_rounds=max_rounds)
+    last_prompt: str = ""
+
+    adapters: list = []
+
     def handle_input(text: str) -> str:
         """Handle user input and return response."""
         try:
-            multi = ",".join(models)
-            adapters = _resolve_adapters(multi, ollama_host=ollama_host, allow_cloud=policy.cloud_share)
-            if not policy.cloud_share and any(not getattr(a, "is_local", True) for a in adapters):
-                adapters = [a for a in adapters if getattr(a, "is_local", True)]
+            nonlocal adapters
+            if not adapters:
+                multi = ",".join(models)
+                adapters = _resolve_adapters(multi, ollama_host=ollama_host, allow_cloud=policy.cloud_share)
+                if not policy.cloud_share and any(not getattr(a, "is_local", True) for a in adapters):
+                    adapters = [a for a in adapters if getattr(a, "is_local", True)]
+                orchestrator.set_participants({getattr(a, "name", f"p{i}"): a for i, a in enumerate(adapters)})
 
-            # Run the roundtable
-            r1 = asyncio.run(run_round(adapters, text, seed=42, timeout_s=timeout_s, round_index=1))
+            # Slash commands (scaffold)
+            if text.startswith('/'):
+                cmd = text.strip().split()
+                if cmd[0] in ('/round',):
+                    if len(cmd) == 1 or cmd[1] == 'status':
+                        r, n, k = orchestrator.round_status()
+                        return f"round={r or 0} participants={n} window_k={k}"
+                    if cmd[1] == 'start':
+                        orchestrator.start()
+                        # Run current round with last_prompt if available
+                        if last_prompt:
+                            rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+                            return _format_rr(rr)
+                        r, _, _ = orchestrator.round_status()
+                        return f"Started round {r} (enter a prompt to run)"
+                    if cmd[1] == 'next':
+                        # Advance and run next round with last_prompt
+                        orchestrator.next_round()
+                        if not last_prompt:
+                            return "No prompt set. Type a prompt first."
+                        rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+                        return _format_rr(rr)
+                    if cmd[1] == 'stop':
+                        orchestrator.stop()
+                        return "Stopped (will not advance further)"
+                    if cmd[1] == 'max' and len(cmd) >= 3:
+                        try:
+                            m = max(1, min(100, int(cmd[2])))
+                            orchestrator.state.max_rounds = m
+                            return f"max_rounds={m}"
+                        except Exception:
+                            return "Invalid max value"
+                    if cmd[1] == 'window' and len(cmd) >= 3:
+                        try:
+                            k = max(0, int(cmd[2]))
+                            orchestrator.state.window_k = k
+                            return f"window_k={k}"
+                        except Exception:
+                            return "Invalid window value"
+                    return "Unknown /round subcommand"
+                if cmd[0] in ('/focus',):
+                    if len(cmd) >= 2:
+                        aliases = [t.strip() for t in " ".join(cmd[1:]).replace(",", " ").split() if t.strip()]
+                        orchestrator.set_focus_next(aliases)
+                        return f"focus next: {', '.join(aliases)}"
+                    return "Usage: /focus <alias1,alias2>"
+                if cmd[0] in ('/temp',):
+                    try:
+                        # /temp [alias] <value>
+                        if len(cmd) == 2:
+                            val = float(cmd[1])
+                        for a in adapters:
+                            if hasattr(a, "_bound"):
+                                a._bound.temperature = val  # type: ignore[attr-defined]
+                            return f"temperature={val} (all)"
+                        if len(cmd) == 3:
+                            alias, val_s = cmd[1], cmd[2]
+                            val = float(val_s)
+                            for a in adapters:
+                                if getattr(a, "name", "").startswith(alias) and hasattr(a, "_bound"):
+                                    a._bound.temperature = val  # type: ignore[attr-defined]
+                            return f"temperature[{alias}]={val}"
+                        return "Usage: /temp [alias] <0.0-1.0>"
+                    except Exception:
+                        return "Invalid temperature"
+                if cmd[0] in ('/mood',):
+                    if len(cmd) < 2:
+                        return "Usage: /mood <preset> | /mood <alias> <preset>"
+                    if len(cmd) == 2:
+                        mood = resolve_mood(cmd[1])
+                        if not mood:
+                            return "Unknown mood"
+                        for a in adapters:
+                            if hasattr(a, "_bound"):
+                                a._bound.system = apply_mood({"system": getattr(a._bound, "system", "" )}, mood)["system"]  # type: ignore[attr-defined]
+                                a._bound.temperature = mood.temperature  # type: ignore[attr-defined]
+                        return f"mood={mood.name} (all)"
+                    if len(cmd) == 3:
+                        alias, mname = cmd[1], cmd[2]
+                        mood = resolve_mood(mname)
+                        if not mood:
+                            return "Unknown mood"
+                        for a in adapters:
+                            if getattr(a, "name", "").startswith(alias) and hasattr(a, "_bound"):
+                                a._bound.system = apply_mood({"system": getattr(a._bound, "system", "" )}, mood)["system"]  # type: ignore[attr-defined]
+                                a._bound.temperature = mood.temperature  # type: ignore[attr-defined]
+                        return f"mood[{alias}]={mood.name}"
+                if cmd[0] in ('/params',) and len(cmd) >= 2 and cmd[1] == 'show':
+                    parts = []
+                    for a in adapters:
+                        seed = getattr(getattr(a, "_bound", None), "seed", None)
+                        temp = getattr(getattr(a, "_bound", None), "temperature", None)
+                        system = getattr(getattr(a, "_bound", None), "system", "")
+                        tmo = getattr(getattr(a, "_bound", None), "timeout_s", None)
+                        parts.append(f"{getattr(a, 'name', '?')}: seed={seed} temp={temp} timeout={tmo} system={'yes' if system else 'no'}")
+                    return "\n".join(parts)
 
-            # Format results with model-specific styling
-            results = []
-            for res in r1:
-                if res.text:
-                    model_name = res.info.name
-                    response_preview = res.text[:150] + "..." if len(res.text) > 150 else res.text
-                    results.append(f'<model-response><model-name>{model_name}</model-name>: {response_preview}</model-response>')
-                else:
-                    results.append(f'<error>{res.info.name}: Error - {res.error or "no output"}</error>')
-
-            return "\n".join(results)
+            # Non-command input: set prompt and run current round (start if needed)
+            last_prompt = text
+            # Ensure participants are set (in case prompt arrives first)
+            if not adapters:
+                multi = ",".join(models)
+                adapters = _resolve_adapters(multi, ollama_host=ollama_host, allow_cloud=policy.cloud_share)
+                if not policy.cloud_share and any(not getattr(a, "is_local", True) for a in adapters):
+                    adapters = [a for a in adapters if getattr(a, "is_local", True)]
+                orchestrator.set_participants({getattr(a, "name", f"p{i}"): a for i, a in enumerate(adapters)})
+            if orchestrator.state.round_idx == 0:
+                orchestrator.start()
+            rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+            return _format_rr(rr)
 
         except Exception as e:
             return f'<error>Error: {str(e)}</error>'
+
+    def _format_rr(rr):
+        # Format RoundRecord to VSCode-style compact lines
+        out = []
+        for e in rr.entries:
+            preview = (e.text or e.error or "").strip()
+            if len(preview) > 150:
+                preview = preview[:150] + "..."
+            if e.ok and e.text:
+                out.append(f'<model-response><model-name>{e.alias}</model-name>: {preview}</model-response>')
+            else:
+                out.append(f'<error>{e.alias}: Error - {preview or "no output"}</error>')
+        return "\n".join(out)
 
     # Create and run the VSCode-style CLI
     cli = create_vscode_actcli(on_input=handle_input)
     cli.run()
 
 
-def run_claude_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollama_host: str | None = None) -> None:
+def run_claude_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollama_host: str | None = None, *, max_rounds: int | None = None, round_window: int = 2) -> None:
     """Claude CLI-style REPL with proper terminal layout."""
     from ..ui.claude_layout import create_claude_style_repl
 
     models: list[str] = [x.strip() for x in initial_multi.split(",") if x.strip()] or ["llama3", "claude", "gpt"]
     policy: Policy = merge_policy()
     last_results: list[TurnResult] | None = None
+
+    orchestrator = RoundOrchestrator(window_k=round_window, max_rounds=max_rounds)
+    last_prompt: str = ""
 
     def handle_input(text: str) -> str:
         nonlocal last_results, policy
@@ -210,6 +310,30 @@ def run_claude_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollam
                 return "Commands: /models, /rounds, /save, /trust, /share, /mcp, /quit"
             elif text == '/models':
                 return f"Current models: {', '.join(models)}"
+            elif text.startswith('/round'):
+                cmd = text.split()
+                if len(cmd) == 1 or cmd[1] == 'status':
+                    r, n, k = orchestrator.round_status()
+                    return f"round={r or 0} participants={n} window_k={k}"
+                if cmd[1] == 'start':
+                    orchestrator.start()
+                    if last_prompt:
+                        rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+                        return _format_rr_plain(rr)
+                    r, _, _ = orchestrator.round_status()
+                    return f"Started round {r} (enter a prompt to run)"
+                if cmd[1] == 'next':
+                    orchestrator.next_round()
+                    if not last_prompt:
+                        return "No prompt set. Type a prompt first."
+                    rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+                    return _format_rr_plain(rr)
+                if cmd[1] == 'stop':
+                    orchestrator.stop()
+                    return "Stopped"
+                return "Unknown /round subcommand"
+            elif text.startswith('/temp') or text.startswith('/mood') or text.startswith('/params'):
+                return "Use /params show, /temp [alias] <val>, /mood [alias] <preset> (vscode layout provides detailed echo)"
             else:
                 return f"Command '{text}' not yet implemented in layout mode"
 
@@ -220,19 +344,14 @@ def run_claude_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollam
             if not policy.cloud_share and any(not getattr(a, "is_local", True) for a in adapters):
                 adapters = [a for a in adapters if getattr(a, "is_local", True)]
 
-            # Run the roundtable
-            r1 = asyncio.run(run_round(adapters, text, seed=42, timeout_s=timeout_s, round_index=1))
-
-            # Format results
-            results = []
-            for res in r1:
-                if res.text:
-                    results.append(f"{res.info.name}: {res.text[:200]}{'...' if len(res.text) > 200 else ''}")
-                else:
-                    results.append(f"{res.info.name}: [Error: {res.error or 'no output'}]")
-
-            last_results = r1
-            return "\n".join(results)
+            # Non-command input: set prompt and orchestrate rounds
+            last_prompt = text
+            orchestrator.set_participants({getattr(a, "name", f"p{i}"): a for i, a in enumerate(adapters)})
+            if orchestrator.state.round_idx == 0:
+                orchestrator.start()
+            rr = orchestrator.run_current_round(prompt=last_prompt, seed=42, timeout_s=timeout_s)
+            last_results = None
+            return _format_rr_plain(rr)
 
         except Exception as e:
             return f"Error: {str(e)}"
@@ -240,6 +359,19 @@ def run_claude_style_repl(initial_multi: str, rounds: int, timeout_s: int, ollam
     def get_status() -> str:
         mode = "HYBRID" if policy.cloud_share else "OFFLINE"
         return f"ActCLI • chat(seminar) • MODE: {mode} • participants: {', '.join(models)} • audit: ON"
+
+    def _format_rr_plain(rr):
+        lines = []
+        for e in rr.entries:
+            if e.ok and e.text:
+                t = e.text
+                if len(t) > 200:
+                    t = t[:200] + '...'
+                lines.append(f"{e.alias}: {t}")
+            else:
+                msg = e.error or 'no output'
+                lines.append(f"{e.alias}: [Error: {msg}]")
+        return "\n".join(lines)
 
     # Create and run the CLI
     cli = create_claude_style_repl(on_input=handle_input, get_status=get_status)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import httpx
 from rich.console import Console
@@ -8,6 +8,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.progress import Progress, BarColumn, TextColumn
 import json
+import os
+import shutil
 
 
 console = Console()
@@ -48,12 +50,18 @@ def list_models(ollama_host: Optional[str]) -> None:
 
 
 def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: Optional[str] = None) -> None:
-    """List models for a provider (ollama|openai|anthropic|google).
+    """List models for a provider (ollama|openai|anthropic|google|claude_cli|codex_cli).
 
     Falls back to curated lists for providers that don't expose listing or when unauthenticated.
     """
-    from ..models.registry import list_models_ollama, list_models_openai, list_models_anthropic, list_models_google, list_models_claude_cli
-    import os
+    from ..models.registry import (
+        list_models_ollama,
+        list_models_openai,
+        list_models_anthropic,
+        list_models_google,
+        list_models_claude_cli,
+        list_models_codex_cli,
+    )
 
     provider = provider.lower()
     models: List[dict] = []
@@ -79,6 +87,62 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
         elif provider == "claude_cli":
             rows = list_models_claude_cli(refresh=refresh)
             models = [{"name": m.model_id, "description": m.display_name} for m in rows]
+        elif provider == "codex_cli":
+            rows = list_models_codex_cli(refresh=refresh)
+            models = [{"name": m.model_id, "description": m.display_name} for m in rows]
+        elif provider in ("all", "*"):
+            # Aggregate view across providers with source/auth columns
+            table = Table(title="Models • all providers", show_header=True, header_style="bold")
+            table.add_column("Provider", style="magenta")
+            table.add_column("Name", style="cyan")
+            table.add_column("Source", style="dim")
+            table.add_column("Auth", style="dim")
+
+            def _auth_for(p: str) -> str:
+                # Best-effort auth state without importing heavy deps
+                if p == "ollama":
+                    return "local"
+                if p == "openai":
+                    return "env" if os.getenv("OPENAI_API_KEY") else "none"
+                if p == "anthropic":
+                    return "env" if os.getenv("ANTHROPIC_API_KEY") else "none"
+                if p == "google":
+                    return "env" if os.getenv("GOOGLE_API_KEY") else "none"
+                if p == "claude_cli":
+                    return "cli" if shutil.which("claude") else "none"
+                if p == "codex_cli":
+                    return "cli" if shutil.which("codex") else "none"
+                return "none"
+
+            # Local (ollama)
+            try:
+                host = _resolve_host(ollama_host)
+                for m in list_models_ollama(host):
+                    table.add_row("ollama", m.model_id, "local", _auth_for("ollama"))
+            except Exception:
+                pass
+            # Cloud APIs
+            for p, func in ("openai", list_models_openai), ("anthropic", list_models_anthropic), ("google", list_models_google):
+                try:
+                    key = os.getenv({"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY"}[p], "")
+                    for m in func(key, refresh=refresh):
+                        table.add_row(p, m.model_id, "cloud(api)", _auth_for(p))
+                except Exception:
+                    continue
+            # CLI-backed
+            try:
+                for m in list_models_claude_cli(refresh=refresh):
+                    table.add_row("claude_cli", m.model_id, "cloud(cli)", _auth_for("claude_cli"))
+            except Exception:
+                pass
+            try:
+                for m in list_models_codex_cli(refresh=refresh):
+                    table.add_row("codex_cli", m.model_id, "cloud(cli)", _auth_for("codex_cli"))
+            except Exception:
+                pass
+
+            console.print(Panel(table, border_style="cyan"))
+            return
         else:
             console.print(Panel(f"Unknown provider: {provider}", border_style="red"))
             return

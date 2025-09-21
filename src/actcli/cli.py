@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from typing import Optional
 
 import typer
@@ -11,7 +10,6 @@ from rich.text import Text
 
 from .version import __version__
 from .config import load_config
-from .trust import get_trust
 
 # Subcommands are loaded lazily to keep import costs low
 
@@ -69,11 +67,12 @@ def auth(
     action: str = typer.Argument(..., help="login|status|logout"),
     provider: Optional[str] = typer.Argument(None, help="openai|anthropic|google"),
     method: Optional[str] = typer.Option(None, help="api-key|device|pkce"),
+    client_id: Optional[str] = typer.Option(None, "--client-id", help="OAuth client_id (e.g., for Google device flow)"),
 ) -> None:
     """Authenticate with providers (API keys or device/OAuth where supported)."""
     from .commands.auth import run_auth
 
-    run_auth(action=action, provider=provider, method=method)
+    run_auth(action=action, provider=provider, method=method, client_id=client_id)
 
 
 @app.command()
@@ -86,6 +85,8 @@ def chat(
     save: Optional[str] = typer.Option(None, "--save", help="Save transcript markdown to path (e.g., out/seminar.md)"),
     audit: Optional[str] = typer.Option(None, "--audit", help="Save audit-lite JSON to path (e.g., out/seminar_audit.json)"),
     presenter_state: Optional[str] = typer.Option(None, "--presenter-state", help="Write presenter state JSON (e.g., out/presenter/state.json)"),
+    max_rounds: Optional[int] = typer.Option(None, "--max-rounds", help="Cap for unlimited-mode rounds (default unlimited, soft clamp 100)"),
+    round_window: int = typer.Option(2, "--round-window", help="Number of prior rounds to include in context window (default 2)"),
 ) -> None:
     """Multi-model chat: interactive by default, or one-shot with --prompt."""
     from .commands.chat import run_roundtable, run_chat_repl
@@ -98,7 +99,14 @@ def chat(
                       ollama_host=ollama_host, save=save, audit=audit, presenter_state=presenter_state)
     else:
         # Interactive chat (what most people want)
-        run_chat_repl(initial_multi=multi, rounds=rounds, timeout_s=timeout_s, ollama_host=ollama_host)
+        run_chat_repl(
+            initial_multi=multi,
+            rounds=rounds,
+            timeout_s=timeout_s,
+            ollama_host=ollama_host,
+            max_rounds=max_rounds,
+            round_window=round_window,
+        )
 
 
 @app.command()
@@ -106,13 +114,19 @@ def models(
     action: str = typer.Argument("list", help="list|pull"),
     models: Optional[str] = typer.Option(None, "--models", help="Comma-separated model tags to pull"),
     all: bool = typer.Option(False, "--all", help="Pull a default set of useful models"),
+    provider: str = typer.Option("ollama", "--provider", help="Provider to list (ollama|openai|anthropic|google)"),
+    refresh: bool = typer.Option(False, "--refresh", help="Force refresh cached list (cloud providers)"),
     ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="Ollama base URL (default http://127.0.0.1:11435)"),
 ) -> None:
-    """List or pull models from the configured Ollama host."""
-    from .commands.models import list_models, pull_models
+    """List or pull models (ollama) and show provider listings."""
+    from .commands.models import list_models, pull_models, list_provider_models
 
     if action == "list":
-        list_models(ollama_host)
+        # For ollama, maintain legacy behavior when provider not specified
+        if provider == "ollama":
+            list_models(ollama_host)
+        else:
+            list_provider_models(provider, refresh=refresh, ollama_host=ollama_host)
     elif action == "pull":
         ids = [m.strip() for m in (models.split(",") if models else []) if m.strip()]
         pull_models(ollama_host, ids, use_default=all)
@@ -195,6 +209,26 @@ def mcp(
         mcp_restart(name)
     else:
         raise SystemExit("Unknown action. Use: list|add|on|off|test|log|reload|restart")
+
+
+@app.command()
+def providers(
+    action: str = typer.Argument("doctor", help="doctor|login"),
+    provider: Optional[str] = typer.Argument(None, help="codex_cli|claude_cli (for login)"),
+) -> None:
+    """Inspect CLI-backed providers or launch their login flows."""
+    from .commands.providers import providers_doctor
+    from .commands.auth import run_auth
+
+    if action == "doctor":
+        providers_doctor()
+        return
+    if action == "login":
+        if provider not in ("codex_cli", "claude_cli"):
+            raise SystemExit("providers login <codex_cli|claude_cli>")
+        run_auth(action="login", provider=provider, method=None)
+        return
+    raise SystemExit("Unknown action. Use: doctor|login")
 
 
 @app.command()
