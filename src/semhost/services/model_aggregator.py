@@ -48,20 +48,38 @@ def _blocked_reason_for(source: str, status: Status, auth_ok: bool) -> str | Non
     return None
 
 
+def _policy_allowed(source: str, status: Status) -> tuple[bool, str | None]:
+    if source == "local":
+        return True, None
+    if status.mode != "HYBRID":
+        return False, "offline"
+    if not status.cloud_share:
+        return False, "cloud_share_disabled"
+    return True, None
+
+
 def aggregate_models(settings: SemhostSettings, status: Status) -> List[ModelItem]:
     items: List[ModelItem] = []
+
+    # We avoid invoking subprocess probes here; use binary presence only.
 
     # Local (ollama) — best effort; swallow network errors
     try:
         for m in list_models_ollama(settings.ollama_host):
+            mech = "local"
             items.append(
                 ModelItem(
                     provider="ollama",
                     id=m.model_id,
                     source="local",
-                    auth=_auth_for("ollama"),
+                    auth=mech,
+                    auth_mechanism=mech,
+                    auth_state="ready",
+                    policy_allowed=True,
+                    policy_reason=None,
                     available=True,
                     description=None,
+                    hint=None,
                     blocked_reason=None,
                 )
             )
@@ -77,18 +95,28 @@ def aggregate_models(settings: SemhostSettings, status: Status) -> List[ModelIte
     ):
         try:
             key = os.getenv(env_key, "")
+            auth_ok_env = bool(key)
             for m in func(key, refresh=False):
-                auth_ok = bool(os.getenv(env_key))
-                br = _blocked_reason_for("cloud(api)", status, auth_ok)
+                mech = "env"
+                policy_ok, policy_reason = _policy_allowed("cloud(api)", status)
+                auth_state = "ready" if auth_ok_env else "missing"
+                available = bool(policy_ok and auth_state == "ready")
+                hint = None if auth_ok_env else f"Set {env_key}"
+                br = _blocked_reason_for("cloud(api)", status, auth_ok_env)
                 items.append(
                     ModelItem(
                         provider=provider,
                         id=m.model_id,
                         source="cloud(api)",
-                        auth=_auth_for(provider),
-                        available=br is None,
+                        auth=mech,
+                        auth_mechanism=mech,
+                        auth_state=auth_state,  # type: ignore[arg-type]
+                        policy_allowed=policy_ok,
+                        policy_reason=policy_reason,  # type: ignore[arg-type]
+                        available=available,
                         description=None,
-                        blocked_reason=br,
+                        hint=hint,
+                        blocked_reason=br,  # back-compat
                     )
                 )
         except Exception:
@@ -101,17 +129,60 @@ def aggregate_models(settings: SemhostSettings, status: Status) -> List[ModelIte
     ):
         try:
             rows = func(refresh=False)
-            cli_ok = bool(shutil.which(bin_name))
-            br = _blocked_reason_for("cloud(cli)", status, cli_ok)
+            cli_bin_ok = bool(shutil.which(bin_name))
+            auth_state = "ready" if cli_bin_ok else "missing"
+            hint = None if cli_bin_ok else (
+                "Install with: npm i -g @anthropic-ai/claude-code" if provider == "claude_cli" else "Install with: npm i -g @openai/codex"
+            )
+
+            mech = "cli"
+            policy_ok, policy_reason = _policy_allowed("cloud(cli)", status)
+            # Back-compat mapping
+            br = _blocked_reason_for("cloud(cli)", status, auth_state == "ready")
+
+            # add rows for discovered models
+            seen_provider = False
             for m in rows:
+                seen_provider = True
+                available = bool(policy_ok and auth_state == "ready")
                 items.append(
                     ModelItem(
                         provider=provider,
                         id=m.model_id,
                         source="cloud(cli)",
-                        auth=_auth_for(provider),
-                        available=br is None,
+                        auth=mech,
+                        auth_mechanism=mech,
+                        auth_state=auth_state,  # type: ignore[arg-type]
+                        policy_allowed=policy_ok,
+                        policy_reason=policy_reason,  # type: ignore[arg-type]
+                        available=available,
                         description=m.display_name,
+                        hint=hint,
+                        blocked_reason=br,
+                    )
+                )
+
+            # If none discovered (e.g., CLI not installed), expose a placeholder row for visibility
+            if not rows:
+                model_id = "sonnet" if provider == "claude_cli" else "default"
+                available = bool(policy_ok and auth_state == "ready")
+                items.append(
+                    ModelItem(
+                        provider=provider,
+                        id=model_id,
+                        source="cloud(cli)",
+                        auth=mech,
+                        auth_mechanism=mech,
+                        auth_state=auth_state,  # type: ignore[arg-type]
+                        policy_allowed=policy_ok,
+                        policy_reason=policy_reason,  # type: ignore[arg-type]
+                        available=available,
+                        description=(
+                            "Claude CLI latest alias (install with npm i -g @anthropic-ai/claude-code)"
+                            if provider == "claude_cli"
+                            else "Codex CLI default (install with npm i -g @openai/codex)"
+                        ),
+                        hint=hint,
                         blocked_reason=br,
                     )
                 )
@@ -119,4 +190,3 @@ def aggregate_models(settings: SemhostSettings, status: Status) -> List[ModelIte
             continue
 
     return items
-
