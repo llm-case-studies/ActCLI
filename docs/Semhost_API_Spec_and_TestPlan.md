@@ -11,8 +11,10 @@ Progress Tracker (copy/paste into issue)
 - [x] Rounds: POST /sessions/{id}/round/start + /round/next
 - [x] Streaming: WS /sessions/{id}/stream (round lifecycle events)
 - [x] Persistence parity: out/sessions/<id>/session.json + round-<n>.json
-- [ ] MCP: GET/PATCH /mcp; SPA toggles
-- [ ] Locations editor (read/write) with PATCH/GET
+- [x] MCP: GET/PATCH /mcp
+- [ ] SPA toggles
+- [x] Locations API (GET/PATCH)
+- [ ] Locations editor (SPA)
 - [ ] Formats catalog: GET /formats + SPA cards (round_robin, delphi_lite, cec)
 - [ ] Synthesis panel (summary + disagreement)
 - [ ] CLI integration prefers semhost, falls back to in-proc
@@ -180,9 +182,12 @@ Sprint 2 — Sessions & Rounds
 - [ ] Tests: SPA e2e (start/next)
 
 Sprint 3 — MCP & Locations
-- [ ] `GET/PATCH /mcp`; UI toggles
-- [ ] Locations editor (read/write globs) with PATCH/GET
-- [ ] Tests: API CRUD; SPA interactions
+- [x] `GET/PATCH /mcp`
+- [ ] UI toggles
+- [x] Locations API (GET/PATCH)
+- [ ] Locations editor (SPA)
+- [x] Tests: API CRUD
+- [ ] Tests: SPA interactions
 
 Sprint 4 — Presets & Polish
 - [ ] `/formats` catalog; apply presets (delphi_lite, cec)

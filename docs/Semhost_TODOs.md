@@ -19,8 +19,8 @@ Sessions & Rounds
 - [x] Persistence parity to out/sessions/<id>
 
 MCP & Locations
-- [ ] /mcp GET/PATCH (list/toggle)
-- [ ] Locations read/write PATCH/GET
+- [x] /mcp GET/PATCH (list/toggle)
+- [x] Locations read/write PATCH/GET (API)
 
 Formats & UX
 - [ ] /formats (round_robin, delphi_lite, cec); defaults applied server-side
