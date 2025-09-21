@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-import typer
 from rich.console import Console
 from rich.panel import Panel
 
 from ..mcp.git_client import GitMCPClient
-from ..git.local import LocalGit
 
 
 console = Console()

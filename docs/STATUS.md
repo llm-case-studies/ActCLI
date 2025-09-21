@@ -23,4 +23,4 @@ This snapshot summarizes what is working now and what’s next.
 - Save outputs: `--save out/seminar.md --audit out/audit.json` or `/save out/seminar.md audit out/audit.json`.
 - Presenter: `actcli presenter start` then set `ACTCLI_PRESENTER_STATE=out/presenter/state.json` while chatting.
 - MCP: `actcli mcp list|test|log|reload|restart`.
-
+- See Architecture for information flows and controls: ./ARCHITECTURE.md

@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from .trust import TrustRecord, get_trust
-from .config import Config, load_config
+from .trust import get_trust
+from .config import load_config
 
 
 @dataclass

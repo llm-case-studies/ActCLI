@@ -516,7 +516,7 @@ Type your question below or use slash commands:
             self.sidebar_state.models_roundtable_expanded = True
             self.sidebar_state.focused_section = "models_available"
             self.sidebar_state.focused_item_index = 0
-            self.conversation_history.append(f'<help>🎯 Models section focused! Use ↑↓ to navigate, Space to toggle, Esc to unfocus</help>')
+            self.conversation_history.append('<help>🎯 Models section focused! Use ↑↓ to navigate, Space to toggle, Esc to unfocus</help>')
         elif command == '/quit':
             self.app.exit()
         else:

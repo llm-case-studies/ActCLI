@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..mcp.config import MCPConfig, MCPServer, load_mcp_config, save_project_mcp_config
+from ..mcp.config import MCPServer, load_mcp_config, save_project_mcp_config
 
 
 console = Console()

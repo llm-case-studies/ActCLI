@@ -4,29 +4,33 @@ Simple tests for subscription-based authentication methods. Conservative approac
 
 ## Files
 
-- `gemini_oauth_min.py` - Google OAuth for Gemini API
+- `gemini_oauth_min.py` - Google OAuth for Gemini API (minimal)
+- `gemini_oauth_plus.py` - Gemini API key or OAuth (robust), friendly hints
 - `claude_cli_min.py` - Claude CLI authentication test
 - `codex_cli_min.py` - OpenAI CLI authentication test
 - `test_auth_methods.py` - Run all tests
 
 ## Setup & Testing
 
-### 1. Gemini OAuth Test
+### 1. Gemini Test (API key or OAuth)
 
-**Prerequisites:**
-- Google account with Gemini access
-- Google Cloud project with Generative AI API enabled
+Option A — API key (quickest):
 
-**Setup:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Create OAuth 2.0 Client ID (Desktop application)
-3. Download JSON and save as `client_secret.json` in this directory
-4. Install dependencies: `pip install google-auth-oauthlib google-generativeai`
-
-**Test:**
 ```bash
-python gemini_oauth_min.py
+pip install google-generativeai
+export GOOGLE_API_KEY=...   # or set in your shell profile
+python gemini_oauth_plus.py --model gemini-2.0-flash
 ```
+
+Option B — OAuth (desktop flow):
+
+```bash
+pip install google-auth-oauthlib google-generativeai
+# In Google Cloud Console: enable Generative Language API; create OAuth 2.0 client (Desktop) and download client_secret.json
+python gemini_oauth_plus.py --oauth --model gemini-2.0-flash
+```
+
+If you hit 403/permission errors, ensure the API is enabled and consider setting `GOOGLE_CLOUD_PROJECT`.
 
 ### 2. Claude CLI Test
 

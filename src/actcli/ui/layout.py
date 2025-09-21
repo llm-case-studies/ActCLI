@@ -4,16 +4,12 @@ Creates proper input area with status space and clean visual hierarchy.
 """
 from __future__ import annotations
 
-import os
-from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich.rule import Rule
-from rich.live import Live
-from rich.layout import Layout
 from rich.padding import Padding
 
 

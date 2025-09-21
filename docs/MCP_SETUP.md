@@ -15,6 +15,8 @@ This project supports running MCP servers locally and registering them with ActC
 
 Git ignore: `available-mcp/` is ignored by default. Share this folder out-of-band when needed.
 
+Also see Architecture for flows and controls: ./ARCHITECTURE.md
+
 ## Registering MCPs with ActCLI
 - Start the server (example): `available-mcp/memory/run.sh`
 - Add to ActCLI:
@@ -42,4 +44,3 @@ echo "Starting Memory-MCP on :$PORT"
 # Example HTTP server; replace with your start command
 uvx memory-mcp --port "$PORT"
 ```
-

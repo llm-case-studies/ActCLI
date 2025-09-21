@@ -3,10 +3,8 @@ from __future__ import annotations
 import http.server
 import os
 import socketserver
-import threading
 import webbrowser
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel

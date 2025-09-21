@@ -8,7 +8,6 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style
-from prompt_toolkit.application import get_app
 
 
 class EnhancedSlashCompleter(Completer):

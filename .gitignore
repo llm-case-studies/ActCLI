@@ -5,3 +5,8 @@ __pycache__/
 .DS_Store
 Examples/
 out/
+available-mcp/
+experiments/oauth-playground/client_secret.json
+.env
+.env.local
+.env.*
