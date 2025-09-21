@@ -74,7 +74,8 @@ Status
 
 Models
 - `GET /models` → `ModelItem[]`
-  - ModelItem: `{ provider, id, source: 'local'|'cloud(api)'|'cloud(cli)', auth: 'local'|'env'|'cli'|'oauth'|'none', available: bool, description? }`
+  - ModelItem (compat): `{ provider, id, source, auth, available, description?, blocked_reason? }`
+  - Enriched: `{ auth_mechanism, auth_state: 'ready'|'missing'|'signed_out'|'unauthorized'|'unknown', policy_allowed: bool, policy_reason?: 'offline'|'cloud_share_disabled', hint? }`
   - Aggregates: ollama, openai, anthropic, google, claude_cli, codex_cli (later: openai_compat, azure_openai)
 
 Providers (CLI)
