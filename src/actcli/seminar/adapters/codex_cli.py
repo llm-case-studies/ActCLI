@@ -43,6 +43,7 @@ class CodexCLIAdapter:
         timeout_s: int = 30,
         round_index: int = 1,
         context_snippets: Optional[str] = None,
+        reasoning: Optional[str] = None,
     ) -> str:
         # Compose prompt with simple round/context shaping
         if round_index == 1:
@@ -57,9 +58,17 @@ class CodexCLIAdapter:
         if system:
             full_prompt = f"System: {system}\n\nUser: {full_prompt}"
 
+        # Decide model and reasoning phrase
+        model = self.model
+        reasoning_phrase = None
+        if reasoning and model.startswith("gpt-5"):
+            r = reasoning.strip().lower()
+            if r in ("minimal", "low", "medium", "high"):
+                reasoning_phrase = f"gpt-5 {r}"
+
         attempts = [
-            ["codex", "exec", "--model", self.model, full_prompt],
-            ["codex", "--model", self.model, full_prompt],
+            ["codex", "exec", "--model", model, full_prompt],
+            ["codex", "--model", model, full_prompt],
             ["codex", "exec", full_prompt],  # default (after possible pre-step)
         ]
 
@@ -78,11 +87,12 @@ class CodexCLIAdapter:
                 res = None
                 continue
 
-        # If both flag forms failed, try pre-switching the model once
+        # If both flag forms failed, try pre-switching the model (and reasoning) once
         if res is None or res.returncode != 0:
-            if self.model and self.model != "default":
+            if (model and model != "default") or reasoning_phrase:
                 try:
-                    subprocess.run(["codex", "/model", self.model], capture_output=True, text=True, timeout=min(8, timeout_s))
+                    target = reasoning_phrase or model
+                    subprocess.run(["codex", "/model", target], capture_output=True, text=True, timeout=min(8, timeout_s))
                     pre_switched = True
                 except Exception:
                     pre_switched = False
