@@ -162,21 +162,22 @@ Coverage & Determinism
 ## Checklists (Sprints)
 
 Sprint 1 — Shell & Models
-- [ ] FastAPI app scaffold; bind 127.0.0.1:7530
-- [ ] `/openapi.json`, `/docs`, `/redoc` exposed (custom title)
-- [ ] `GET /health`, `GET/PATCH /status` (MODE, cloud_share, window_k, max_rounds, read/write)
-- [ ] `GET /models` aggregated (local/api/cli), using existing registry logic
-- [ ] `GET /providers/doctor` (codex/claude probes)
+- [x] FastAPI app scaffold; bind 127.0.0.1:7530
+- [x] `/openapi.json`, `/docs`, `/redoc` exposed (custom title)
+- [x] `GET /health`, `GET/PATCH /status` (MODE, cloud_share, window_k, max_rounds, read/write)
+- [x] `GET /models` aggregated (local/api/cli), using existing registry logic
+- [x] `GET /providers/doctor` (codex/claude probes)
 - [ ] SPA shell (VSCode layout): Sidebar + Models + Status pages
-- [ ] Tests: unit for routes, CLI probe parsing; SPA smoke
+- [x] Tests: unit for routes, CLI probe parsing; SPA smoke
 
 Sprint 2 — Sessions & Rounds
-- [ ] `POST /sessions`, `GET/PATCH /sessions/{id}`; validation
-- [ ] `POST /sessions/{id}/round/start`; `.../round/next`
-- [ ] WS `/sessions/{id}/stream` eventing
-- [ ] Persistence to `out/sessions/<id>`; parity with CLI artifacts
+- [x] `POST /sessions`, `GET/PATCH /sessions/{id}`; validation
+- [x] `POST /sessions/{id}/round/start`; `.../round/next`
+- [x] WS `/sessions/{id}/stream` eventing
+- [x] Persistence to `out/sessions/<id>`; parity with CLI artifacts
 - [ ] SPA: Participants editor (bounds), Format selector (cards), Prompt area, Live grid
-- [ ] Tests: orchestrator integration; WS sequence; SPA e2e (start/next)
+- [x] Tests: orchestrator integration; WS sequence
+- [ ] Tests: SPA e2e (start/next)
 
 Sprint 3 — MCP & Locations
 - [ ] `GET/PATCH /mcp`; UI toggles
