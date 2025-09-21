@@ -13,8 +13,11 @@ class CodexCLIAdapter:
     - User signed in: run `codex` and choose "Sign in with ChatGPT"
 
     Notes:
-    - Codex CLI doesn't reliably support a `--model` flag across versions; selection is interactive via `codex /model`.
-    - We treat `model` value as a label; execution uses the active CLI model.
+    - Codex CLI model selection varies by version. We attempt, in order:
+      1) `codex exec --model <model> <prompt>` (newer versions)
+      2) `codex --model <model> <prompt>` (some builds)
+      3) `codex /model <model>` pre-step, then `codex exec <prompt>` (fallback)
+    - If none succeed, we fall back to the active CLI model.
     - System/temperature/seed are not first-class CLI flags; we fold system into the prompt.
     """
 
@@ -54,15 +57,48 @@ class CodexCLIAdapter:
         if system:
             full_prompt = f"System: {system}\n\nUser: {full_prompt}"
 
-        cmd = ["codex", "exec", full_prompt]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+        attempts = [
+            ["codex", "exec", "--model", self.model, full_prompt],
+            ["codex", "--model", self.model, full_prompt],
+            ["codex", "exec", full_prompt],  # default (after possible pre-step)
+        ]
+
+        pre_switched = False
+        res = None
+        # Try direct model flag forms first
+        for i, cmd in enumerate(attempts[:2]):
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+                if res.returncode == 0 and (res.stdout or "").strip():
+                    break
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
+            except Exception:
+                # Try next form
+                res = None
+                continue
+
+        # If both flag forms failed, try pre-switching the model once
+        if res is None or res.returncode != 0:
+            if self.model and self.model != "default":
+                try:
+                    subprocess.run(["codex", "/model", self.model], capture_output=True, text=True, timeout=min(8, timeout_s))
+                    pre_switched = True
+                except Exception:
+                    pre_switched = False
+            # Final attempt with default exec
+            try:
+                res = subprocess.run(["codex", "exec", full_prompt], capture_output=True, text=True, timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
+            except Exception as e:
+                raise RuntimeError(f"Codex CLI error: {e}")
         except subprocess.TimeoutExpired:
             raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
         except Exception as e:
             raise RuntimeError(f"Codex CLI error: {e}")
 
-        if res.returncode != 0:
+        if res is None or res.returncode != 0:
             err = res.stderr.strip() or res.stdout.strip() or "unknown error"
             raise RuntimeError(f"Codex CLI failed: {err}")
 
@@ -96,4 +132,3 @@ class CodexCLIAdapter:
         # Use the last block as the answer
         out = "\n".join(blocks[-1]).strip()
         return out or text.strip()
-
