@@ -1,16 +1,16 @@
 # Semhost (FastAPI) — API, Docs, and Test Plan
 
 Progress Tracker (copy/paste into issue)
-- [ ] Semhost skeleton running on 127.0.0.1:7530
-- [ ] OpenAPI docs exposed at /openapi.json, /docs, /redoc
-- [ ] Status: GET/PATCH /status (mode, cloud_share, window_k, max_rounds, read/write)
-- [ ] Models: GET /models (aggregated local/api/cli with Source/Auth badges)
-- [ ] Providers doctor: GET /providers/doctor, POST /auth/cli/login
+- [x] Semhost skeleton running on 127.0.0.1:7530
+- [x] OpenAPI docs exposed at /openapi.json, /docs, /redoc
+- [x] Status: GET/PATCH /status (mode, cloud_share, window_k, max_rounds, read/write)
+- [x] Models: GET /models (aggregated local/api/cli with Source/Auth badges)
+- [x] Providers doctor: GET /providers/doctor, POST /auth/cli/login
 - [ ] SPA shell (VSCode layout): Sidebar + Models + Status pages
-- [ ] Sessions: POST/GET/PATCH /sessions
-- [ ] Rounds: POST /sessions/{id}/round/start + /round/next
-- [ ] Streaming: WS /sessions/{id}/stream (round lifecycle events)
-- [ ] Persistence parity: out/sessions/<id>/session.json + round-<n>.json
+- [x] Sessions: POST/GET/PATCH /sessions
+- [x] Rounds: POST /sessions/{id}/round/start + /round/next
+- [x] Streaming: WS /sessions/{id}/stream (round lifecycle events)
+- [x] Persistence parity: out/sessions/<id>/session.json + round-<n>.json
 - [ ] MCP: GET/PATCH /mcp; SPA toggles
 - [ ] Locations editor (read/write) with PATCH/GET
 - [ ] Formats catalog: GET /formats + SPA cards (round_robin, delphi_lite, cec)

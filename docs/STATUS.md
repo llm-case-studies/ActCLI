@@ -11,11 +11,20 @@ This snapshot summarizes what is working now and what’s next.
 - MCP manager: list/add/on/off/test/log/reload/restart; per‑server logs; project/global configs.
 - Presenter: lightweight SPA (actcli presenter start) that auto‑reads state.json.
 
+### Semhost (FastAPI backend)
+- Sessions API: POST/GET/PATCH /sessions
+- Rounds API: /sessions/{id}/round/start and /round/next
+- WebSocket streaming: /sessions/{id}/stream with round lifecycle events
+- Models API: aggregated local/api/cli with auth/policy fields
+- Providers doctor and CLI login handoff
+- Deterministic artifacts under out/sessions/<id>
+
 ## Near‑Term Roadmap
 - MCP stdio deep‑test (spawn + handshake) for non‑HTTP servers (e.g., Serena).
 - REPL /mcp ui (TUI) and arrow‑key first‑run wizard.
 - Persist /allow and /deny to actcli.toml.
 - Optional events.ndjson for Presenter timeline.
+ - Semhost Sprint 3: MCP + Locations
 
 ## Usage Highlights
 - Start: `actcli` → wizard → REPL. Help: `/help`.
