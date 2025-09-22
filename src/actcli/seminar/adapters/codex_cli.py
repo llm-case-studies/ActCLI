@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import shutil
 from typing import Optional
+import json
 
 
 class CodexCLIAdapter:
@@ -103,31 +104,42 @@ class CodexCLIAdapter:
                 raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
             except Exception as e:
                 raise RuntimeError(f"Codex CLI error: {e}")
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
-        except Exception as e:
-            raise RuntimeError(f"Codex CLI error: {e}")
 
         if res is None or res.returncode != 0:
             err = res.stderr.strip() or res.stdout.strip() or "unknown error"
             raise RuntimeError(f"Codex CLI failed: {err}")
 
-        # Parse output: prefer the last non-empty block without leading metadata brackets
-        text = res.stdout or ""
-        lines = [ln.rstrip() for ln in text.splitlines()]
-        # Collect contiguous blocks of "content-like" lines
+        raw = (res.stdout or "").strip()
+        # Try JSON first if available (some builds support structured output)
+        if raw.startswith("{") or raw.startswith("["):
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    for key in ("result", "text", "output", "content"):
+                        if isinstance(data.get(key), str) and data.get(key).strip():
+                            return data[key].strip()
+            except Exception:
+                pass
+
+        # Fallback: extract the most substantial content that is not just echo
+        lines = [ln.rstrip() for ln in raw.splitlines()]
         blocks: list[list[str]] = []
         cur: list[str] = []
+
         def is_content(ln: str) -> bool:
-            if not ln.strip():
+            s = ln.strip()
+            if not s:
                 return False
-            if ln.lstrip().startswith("["):
+            if s == prompt.strip() or s.startswith("Original prompt:") or s.startswith("System:"):
                 return False
-            if ln.startswith("workdir:") or ln.startswith("model:") or ln.startswith("provider:") or ln.startswith("approval:"):
+            if s.lstrip().startswith("["):
                 return False
-            if ln.startswith("User instructions:") or ln.startswith("--------"):
+            if s.startswith("workdir:") or s.startswith("model:") or s.startswith("provider:") or s.startswith("approval:"):
+                return False
+            if s.startswith("User instructions:") or s.startswith("--------"):
                 return False
             return True
+
         for ln in lines:
             if is_content(ln):
                 cur.append(ln)
@@ -138,7 +150,8 @@ class CodexCLIAdapter:
         if cur:
             blocks.append(cur)
         if not blocks:
-            return text.strip()
-        # Use the last block as the answer
-        out = "\n".join(blocks[-1]).strip()
-        return out or text.strip()
+            return raw
+        # Choose the longest block by character count (less likely to be an echo)
+        out_block = max(blocks, key=lambda b: sum(len(x) for x in b))
+        out = "\n".join(out_block).strip()
+        return out or raw

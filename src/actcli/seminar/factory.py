@@ -8,6 +8,7 @@ from .adapters.ollama import OllamaAdapter
 from .adapters.openai import OpenAIAdapter
 from .adapters.anthropic import AnthropicAdapter
 from .adapters.codex_cli import CodexCLIAdapter
+from .adapters.gemini_cli import GeminiCLIAdapter
 from .adapters.claude_cli import ClaudeCLIAdapter
 from .adapters.gemini import GeminiAdapter
 from .adapters.echo import EchoAdapter
@@ -119,6 +120,9 @@ class AdapterFactory:
             elif provider == "codex_cli":
                 # OpenAI Codex CLI (subscription-backed); model id is a label only
                 base = CodexCLIAdapter(model=spec.model_id or "default")
+            elif provider == "gemini_cli":
+                # Gemini CLI shim (subscription-backed or API key); always allowed since it's user's own subscription
+                base = GeminiCLIAdapter(model=spec.model_id or "gemini-1.5-flash")
             elif provider == "google":
                 if not allow_cloud:
                     return BoundAdapter(EchoAdapter(name=f"{alias or spec.model_id}(cloud-blocked)"), alias=alias or "google", params=params)

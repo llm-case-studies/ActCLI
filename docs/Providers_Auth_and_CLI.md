@@ -118,3 +118,12 @@ In `experiments/oauth-playground/`:
 - Providers readiness: `actcli providers doctor`
 - Codex/Claude issues: re-run vendor CLI to re-auth, or `actcli providers login <cli>`
 - Gemini 403: ensure the Generative Language API is enabled; set `GOOGLE_CLOUD_PROJECT` if needed.
+
+### Codex CLI returns prompt (echo) instead of answer
+- Some Codex builds print metadata and echo the prompt. Our adapter now:
+  - Tries structured output first (JSON if present), then
+  - Extracts the largest content block excluding prompt echoes and metadata.
+- Tips if you still see echo:
+  - Use `codex exec --model gpt-4o-mini "..."` (fast) or pre-select with `codex /model gpt-4o-mini`.
+  - Avoid passing extremely long prompts as a single shell argument; prefer concise prompts.
+  - Increase `timeout_s` if the model needs more time.
