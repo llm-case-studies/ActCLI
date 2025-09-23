@@ -16,6 +16,7 @@ from .routers import mcp as mcp_router
 from .routers import locations as locations_router
 from .routers import pricing as pricing_router
 from .routers import conversations as conversations_router
+from .routers import chat as chat_router
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
@@ -47,6 +48,7 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(locations_router.router)
     app.include_router(pricing_router.router)
     app.include_router(conversations_router.router)
+    app.include_router(chat_router.router)
 
     # Ephemeral state: reset status on app creation (Sprint 1)
     _deps.reset_status()
