@@ -27,6 +27,8 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     if st.cli_paths:
         existing = os.environ.get("PATH", "")
         os.environ["PATH"] = os.pathsep.join(st.cli_paths + [existing])
+    if getattr(st, "cli_disable_tools", True):
+        os.environ["ACTCLI_DISABLE_CLI_MCP"] = "1"
 
     # CORS: allow specific SPA origins only; no credentials
     app.add_middleware(

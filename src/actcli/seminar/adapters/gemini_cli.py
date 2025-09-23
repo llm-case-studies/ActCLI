@@ -4,6 +4,7 @@ import json
 import shutil
 import subprocess
 from typing import Optional
+import os
 
 
 class GeminiCLIAdapter:
@@ -56,6 +57,15 @@ class GeminiCLIAdapter:
             full_prompt = f"System: {system}\n\nUser: {full_prompt}"
 
         model = self.model
+        # Build environment with optional tool/MCP disable
+        env = os.environ.copy()
+        if env.get("ACTCLI_DISABLE_CLI_MCP") == "1":
+            env["NO_MCP"] = "1"
+            env["GEMINI_CLI_DISABLE_TOOLS"] = "1"
+            env["GEMINI_DISABLE_MCP"] = "1"
+            env["MCP_CONFIG"] = ""
+            env["MCP_ENDPOINTS"] = ""
+
         attempts = []
         if model and model != "default":
             attempts.extend([
@@ -70,7 +80,7 @@ class GeminiCLIAdapter:
         res = None
         for cmd in attempts:
             try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
                 if res.returncode == 0 and (res.stdout or "").strip():
                     break
             except subprocess.TimeoutExpired:
@@ -125,4 +135,3 @@ class GeminiCLIAdapter:
             return raw
         out = max(blocks, key=lambda b: sum(len(x) for x in b))
         return "\n".join(out).strip() or raw
-

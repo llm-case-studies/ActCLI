@@ -30,6 +30,8 @@ class SemhostSettings(BaseSettings):
     cli_debug: bool = Field(default=False, alias="SEMHOST_CLI_DEBUG")
     # Timeout for provider doctor CLI probes (seconds)
     cli_probe_timeout_s: int = Field(default=12, alias="SEMHOST_CLI_PROBE_TIMEOUT_S")
+    # Disable vendor CLI MCP/tools globally (best-effort)
+    cli_disable_tools: bool = Field(default=True, alias="SEMHOST_CLI_DISABLE_TOOLS")
 
     @field_validator("cors_origins", mode="before")
     @classmethod
