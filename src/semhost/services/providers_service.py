@@ -31,7 +31,9 @@ def _auth_probe_codex() -> Tuple[str, str]:
     if not _which("codex"):
         return ("missing", "Install with: npm i -g @openai/codex")
     try:
-        p = subprocess.run(["codex", "exec", "ping"], capture_output=True, text=True, timeout=8)
+        t = max(4, int(get_settings().cli_probe_timeout_s))
+        _ = _version("codex")
+        p = subprocess.run(["codex", "exec", "ping"], capture_output=True, text=True, timeout=t)
         if p.returncode == 0:
             return ("ok", "signed in")
         return ("no", (p.stderr or p.stdout or "not signed in").strip()[:120])
@@ -45,7 +47,9 @@ def _auth_probe_claude() -> Tuple[str, str]:
     if not _which("claude"):
         return ("missing", "Install with: npm i -g @anthropic-ai/claude-code")
     try:
-        p = subprocess.run(["claude", "-p", "test", "--output-format", "json"], capture_output=True, text=True, timeout=8)
+        t = max(4, int(get_settings().cli_probe_timeout_s))
+        _ = _version("claude")
+        p = subprocess.run(["claude", "-p", "test", "--output-format", "json"], capture_output=True, text=True, timeout=t)
         if p.returncode == 0:
             return ("ok", "signed in")
         return ("no", (p.stderr or p.stdout or "not signed in").strip()[:120])
@@ -58,11 +62,20 @@ def _auth_probe_claude() -> Tuple[str, str]:
 def _auth_probe_gemini() -> Tuple[str, str]:
     if not _which("gemini"):
         return ("missing", "Install with: npm i -g @google/gemini-cli@nightly")
+    # Prefer identity call if present; otherwise tiny prompt with configurable timeout
     try:
-        p = subprocess.run(["gemini", "-p", "test"], capture_output=True, text=True, timeout=8)
-        if p.returncode == 0:
+        p = subprocess.run(["gemini", "whoami"], capture_output=True, text=True, timeout=5)
+        if p.returncode == 0 and (p.stdout or "").strip():
             return ("ok", "signed in")
-        return ("no", (p.stderr or p.stdout or "not signed in").strip()[:120])
+    except Exception:
+        pass
+    try:
+        t = max(4, int(get_settings().cli_probe_timeout_s))
+        _ = _version("gemini")
+        p2 = subprocess.run(["gemini", "-p", "test"], capture_output=True, text=True, timeout=t)
+        if p2.returncode == 0:
+            return ("ok", "signed in")
+        return ("no", (p2.stderr or p2.stdout or "not signed in").strip()[:120])
     except subprocess.TimeoutExpired:
         return ("unknown", "probe timeout")
     except Exception as e:

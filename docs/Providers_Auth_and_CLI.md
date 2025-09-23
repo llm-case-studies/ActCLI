@@ -127,3 +127,8 @@ In `experiments/oauth-playground/`:
   - Use `codex exec --model gpt-4o-mini "..."` (fast) or pre-select with `codex /model gpt-4o-mini`.
   - Avoid passing extremely long prompts as a single shell argument; prefer concise prompts.
   - Increase `timeout_s` if the model needs more time.
+
+### Provider doctor shows timeout but CLI works
+- Doctor probes are designed to be quick. Some CLIs (e.g., Gemini) can take >8s even for tiny prompts.
+- You can raise the probe timeout via env: `SEMHOST_CLI_PROBE_TIMEOUT_S=12` (default is 12s in our current build).
+- The Gemini doctor first tries `gemini whoami` (if available) and falls back to a tiny prompt with the configured timeout.

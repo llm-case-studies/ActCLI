@@ -28,6 +28,8 @@ class SemhostSettings(BaseSettings):
     cli_paths: List[str] = Field(default_factory=list, alias="SEMHOST_CLI_PATHS")
     # Include stderr snippets in responses when CLI errors occur
     cli_debug: bool = Field(default=False, alias="SEMHOST_CLI_DEBUG")
+    # Timeout for provider doctor CLI probes (seconds)
+    cli_probe_timeout_s: int = Field(default=12, alias="SEMHOST_CLI_PROBE_TIMEOUT_S")
 
     @field_validator("cors_origins", mode="before")
     @classmethod
