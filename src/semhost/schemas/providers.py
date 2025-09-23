@@ -20,3 +20,13 @@ class CliLoginRequest(BaseModel):
 class CliLoginResponse(BaseModel):
     launched: bool
     hint: Optional[str] = None
+
+
+class CliModelSwitchRequest(BaseModel):
+    provider: Literal["codex_cli", "gemini_cli", "claude_cli"]
+    model: str
+
+
+class CliModelSwitchResponse(BaseModel):
+    ok: bool
+    hint: Optional[str] = None

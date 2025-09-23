@@ -4,8 +4,8 @@ from typing import List
 
 from fastapi import APIRouter
 
-from ..schemas.providers import CliLoginRequest, CliLoginResponse, DoctorRow
-from ..services.providers_service import providers_doctor_rows, providers_login
+from ..schemas.providers import CliLoginRequest, CliLoginResponse, DoctorRow, CliModelSwitchRequest, CliModelSwitchResponse
+from ..services.providers_service import providers_doctor_rows, providers_login, providers_switch_model
 
 
 router = APIRouter()
@@ -20,3 +20,7 @@ def providers_doctor_route() -> List[DoctorRow]:
 def auth_cli_login_route(req: CliLoginRequest) -> CliLoginResponse:
     return providers_login(req)
 
+
+@router.post("/providers/cli/model", response_model=CliModelSwitchResponse)
+def providers_cli_model_route(req: CliModelSwitchRequest) -> CliModelSwitchResponse:
+    return providers_switch_model(req)

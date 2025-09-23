@@ -4,7 +4,13 @@ import shutil
 import subprocess
 from typing import List, Tuple
 
-from ..schemas.providers import CliLoginRequest, CliLoginResponse, DoctorRow
+from ..schemas.providers import (
+    CliLoginRequest,
+    CliLoginResponse,
+    DoctorRow,
+    CliModelSwitchRequest,
+    CliModelSwitchResponse,
+)
 
 
 def _which(cmd: str) -> str | None:
@@ -120,3 +126,36 @@ def providers_login(req: CliLoginRequest) -> CliLoginResponse:
 
     # Should not happen due to schema validation
     return CliLoginResponse(launched=False, hint="unknown provider")
+
+
+def providers_switch_model(req: CliModelSwitchRequest) -> CliModelSwitchResponse:
+    prov = req.provider
+    model = req.model.strip()
+    try:
+        if prov == "codex_cli":
+            if not _which("codex"):
+                return CliModelSwitchResponse(ok=False, hint="codex binary not found")
+            p = subprocess.run(["codex", "/model", model], capture_output=True, text=True, timeout=8)
+            if p.returncode == 0:
+                return CliModelSwitchResponse(ok=True)
+            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+        if prov == "gemini_cli":
+            if not _which("gemini"):
+                return CliModelSwitchResponse(ok=False, hint="gemini binary not found")
+            # Best-effort: verify model usable by making a short call with --model
+            p = subprocess.run(["gemini", "-p", "test", "--model", model], capture_output=True, text=True, timeout=8)
+            if p.returncode == 0:
+                return CliModelSwitchResponse(ok=True)
+            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+        if prov == "claude_cli":
+            if not _which("claude"):
+                return CliModelSwitchResponse(ok=False, hint="claude binary not found")
+            # Claude supports --model per call; no global switch, but verify via a quick call
+            p = subprocess.run(["claude", "-p", "test", "--output-format", "json", "--model", model], capture_output=True, text=True, timeout=8)
+            if p.returncode == 0:
+                return CliModelSwitchResponse(ok=True)
+            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+    except subprocess.TimeoutExpired:
+        return CliModelSwitchResponse(ok=False, hint="probe timeout")
+    except Exception as e:
+        return CliModelSwitchResponse(ok=False, hint=str(e))

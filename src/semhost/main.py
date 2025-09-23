@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 from .settings import SemhostSettings, get_default_settings
 from . import deps as _deps
@@ -13,11 +14,18 @@ from .routers import sessions as sessions_router
 from .routers import ws as ws_router
 from .routers import mcp as mcp_router
 from .routers import locations as locations_router
+from .routers import pricing as pricing_router
+from .routers import conversations as conversations_router
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     st = settings or get_default_settings()
     app = FastAPI(title="ActCLI Semhost", version="1.0.0")
+
+    # Extend PATH for vendor CLIs if configured
+    if st.cli_paths:
+        existing = os.environ.get("PATH", "")
+        os.environ["PATH"] = os.pathsep.join(st.cli_paths + [existing])
 
     # CORS: allow specific SPA origins only; no credentials
     app.add_middleware(
@@ -37,6 +45,8 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(ws_router.router)
     app.include_router(mcp_router.router)
     app.include_router(locations_router.router)
+    app.include_router(pricing_router.router)
+    app.include_router(conversations_router.router)
 
     # Ephemeral state: reset status on app creation (Sprint 1)
     _deps.reset_status()
