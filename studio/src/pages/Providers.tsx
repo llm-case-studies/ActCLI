@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
+import { useStudio } from '../store'
 
 type DoctorRow = { provider: string, binary: string, version: string, auth: string, hint: string }
 
 export function ProvidersPage({ server }: { server: string }) {
+  const s = useStudio()
   const [rows, setRows] = useState<DoctorRow[]>([])
   const [timeoutS, setTimeoutS] = useState<number>(12)
   const [debug, setDebug] = useState<boolean>(false)
@@ -10,29 +12,29 @@ export function ProvidersPage({ server }: { server: string }) {
 
   const load = async () => {
     setMsg('')
-    const s = await fetch(`${server}/providers/settings`).then(r=>r.json())
-    setTimeoutS(s.cli_probe_timeout_s)
-    setDebug(!!s.cli_debug)
-    const d = await fetch(`${server}/providers/doctor`).then(r=>r.json())
+    const settings = await (await s.fetcher('GET', `${server}/providers/settings`)).json()
+    setTimeoutS(settings.cli_probe_timeout_s)
+    setDebug(!!settings.cli_debug)
+    const d = await (await s.fetcher('GET', `${server}/providers/doctor`)).json()
     setRows(d)
   }
   useEffect(()=>{ load() }, [server])
 
   const saveSettings = async () => {
-    await fetch(`${server}/providers/settings`, { method:'PATCH', headers:{'content-type':'application/json'}, body: JSON.stringify({ cli_probe_timeout_s: timeoutS, cli_debug: debug }) })
+    await s.fetcher('PATCH', `${server}/providers/settings`, { cli_probe_timeout_s: timeoutS, cli_debug: debug })
     setMsg('Saved settings')
     await load()
   }
 
   const login = async (provider: string) => {
-    await fetch(`${server}/auth/cli/login`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ provider }) })
+    await s.fetcher('POST', `${server}/auth/cli/login`, { provider })
     setMsg(`Launched ${provider}`)
   }
 
   const switchModel = async (provider: string) => {
     const model = prompt(`Model for ${provider} (e.g., gpt-5-codex, gemini-1.5-flash-latest)`)
     if (!model) return
-    const r = await fetch(`${server}/providers/cli/model`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ provider, model }) })
+    const r = await s.fetcher('POST', `${server}/providers/cli/model`, { provider, model })
     const j = await r.json()
     setMsg(j.ok? 'Model verified' : (j.hint || 'Model switch failed'))
   }
@@ -74,4 +76,3 @@ export function ProvidersPage({ server }: { server: string }) {
 const th: React.CSSProperties = { textAlign:'left', borderBottom:'1px solid #ddd', padding:6 }
 const td: React.CSSProperties = { borderBottom:'1px solid #f0f0f0', padding:6, fontSize:14 }
 const btn: React.CSSProperties = { padding:'6px 10px', border:'1px solid #ccc', borderRadius:6, background:'#fafafa', cursor:'pointer' }
-

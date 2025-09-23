@@ -32,6 +32,13 @@ Track progress with simple checkboxes. Mark [x] when done.
 - [ ] Synthesis improvements (agreements/disagreements)
 - [ ] Unit tests and coverage (≥80% on new code)
 
+## Studio (SPA)
+- [ ] Model Detail View (pricing/history/actions: 1×1 chat, add to seminar, CLI switch)
+- [ ] WS backoff + offline banner + retry
+- [ ] Ollama tags sub-panel + pull with streaming progress
+- [ ] Seminar: participants table + presets + Advanced JSON toggle
+- [ ] Models/Providers: badges + sort/filter + “use fast profile” CTA
+
 ## Trust, Policy, and UX
 - [x] First-run wizard (minimal prompts)
 - [x] Trust store + /trust commands

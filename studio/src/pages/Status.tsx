@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react'
+import { useStudio } from '../store'
 
 type Status = { mode: 'OFFLINE'|'HYBRID', cloud_share: boolean, window_k: number, max_rounds?: number|null, read: string[], write: string[] }
 
 export function StatusPage({ server }: { server: string }) {
+  const s = useStudio()
   const [st, setSt] = useState<Status|null>(null)
   const [err, setErr] = useState('')
   const load = async () => {
     setErr('')
-    try { setSt(await fetch(`${server}/status`).then(r=>r.json())) } catch(e:any){ setErr(String(e)) }
+    try { setSt(await (await s.fetcher('GET', `${server}/status`)).json()) } catch(e:any){ setErr(String(e)) }
   }
   useEffect(()=>{ load() }, [server])
 
   const save = async () => {
     if (!st) return
-    await fetch(`${server}/status`, { method:'PATCH', headers:{'content-type':'application/json'}, body: JSON.stringify(st) })
+    await s.fetcher('PATCH', `${server}/status`, st)
     await load()
   }
 
@@ -42,4 +44,3 @@ export function StatusPage({ server }: { server: string }) {
     </div>
   )
 }
-

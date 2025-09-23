@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 
 from .settings import SemhostSettings, get_default_settings
@@ -17,6 +18,7 @@ from .routers import locations as locations_router
 from .routers import pricing as pricing_router
 from .routers import conversations as conversations_router
 from .routers import chat as chat_router
+from .routers import history as history_router
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
@@ -51,6 +53,15 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(pricing_router.router)
     app.include_router(conversations_router.router)
     app.include_router(chat_router.router)
+    app.include_router(history_router.router)
+
+    # Serve built SPA (if present) at /ui
+    try:
+        ui_dir = os.path.join(os.getcwd(), "studio", "dist")
+        if os.path.isdir(ui_dir):
+            app.mount("/ui", StaticFiles(directory=ui_dir, html=True), name="ui")
+    except Exception:
+        pass
 
     # Ephemeral state: reset status on app creation (Sprint 1)
     _deps.reset_status()

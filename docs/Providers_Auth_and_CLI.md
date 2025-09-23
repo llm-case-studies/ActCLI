@@ -113,6 +113,10 @@ In `experiments/oauth-playground/`:
 - API keys are read from env only; vendor CLIs manage their own login states.
 - CLI-backed adapters treat “model” as a label; execution uses the active CLI selection.
 
+Disable tools semantics (chat/one)
+- For `POST /chat/one`, `disable_tools=true` by default (best-effort) to avoid slow or non-audited tool/MCP calls in CLI providers.
+- In containerized demos, prefer running Semhost with CLI tooling in-image so tool availability is predictable. Otherwise, run Semhost on host and keep `disable_tools=true` for speed and control.
+
 ## Troubleshooting
 
 - Providers readiness: `actcli providers doctor`

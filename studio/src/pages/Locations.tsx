@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react'
+import { useStudio } from '../store'
 
 export function LocationsPage({ server }: { server: string }) {
+  const s = useStudio()
   const [read, setRead] = useState<string>('')
   const [write, setWrite] = useState<string>('')
   const [msg, setMsg] = useState<string>('')
   const load = async () => {
-    const d = await fetch(`${server}/locations`).then(r=>r.json())
+    const d = await (await s.fetcher('GET', `${server}/locations`)).json()
     setRead((d.read||[]).join('\n'))
     setWrite((d.write||[]).join('\n'))
   }
   useEffect(()=>{ load() }, [server])
   const save = async () => {
-    await fetch(`${server}/locations`, { method:'PATCH', headers:{'content-type':'application/json'}, body: JSON.stringify({ read: read.split('\n').filter(Boolean), write: write.split('\n').filter(Boolean) }) })
+    await s.fetcher('PATCH', `${server}/locations`, { read: read.split('\n').filter(Boolean), write: write.split('\n').filter(Boolean) })
     setMsg('Saved')
     await load()
   }
@@ -32,4 +34,3 @@ export function LocationsPage({ server }: { server: string }) {
     </div>
   )
 }
-

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+import os
 
 from ..deps import get_status
 from ..schemas.chat import ChatOneRequest, ChatOneResponse
@@ -16,13 +17,20 @@ async def chat_one_route(req: ChatOneRequest) -> ChatOneResponse:
     allow_cloud = status.mode == "HYBRID" and bool(status.cloud_share)
 
     # Build a single participant via existing builder
-    from ..schemas.participants import ParticipantIn
+    from ..schemas.participants import ParticipantIn, BoundParams
 
+    # For chat/one, the top-level timeout_s is the scheduler limit.
+    # To keep semantics consistent, ignore bound_params.timeout_s so adapter-level
+    # timeout doesn't override scheduler.
+    bp = None
+    if req.bound_params is not None:
+        bp = BoundParams(**req.bound_params.model_dump())
+        bp.timeout_s = None
     pi = ParticipantIn(
         alias=req.alias or req.provider,
         provider=req.provider,
         model_id=req.model_id,
-        bound_params=req.bound_params,
+        bound_params=bp,
     )
     adapters, _meta = build_adapters([pi], allow_cloud=allow_cloud)
     if not adapters:
@@ -38,7 +46,33 @@ async def chat_one_route(req: ChatOneRequest) -> ChatOneResponse:
     # Use run in thread pool (async safe)
     import asyncio
 
-    rr = await asyncio.to_thread(orch.run_current_round, prompt=req.prompt, seed=None, timeout_s=int(req.timeout_s))
+    # Per-call raw/debug and tool control via env overrides (best-effort)
+    prev = os.environ.get("CODEX_CLI_RAW")
+    prev_dbg = os.environ.get("SEMHOST_CLI_DEBUG")
+    prev_mcp = os.environ.get("ACTCLI_DISABLE_CLI_MCP")
+    try:
+        if req.raw:
+            os.environ["CODEX_CLI_RAW"] = "1"
+            os.environ["SEMHOST_CLI_DEBUG"] = "true"
+        else:
+            os.environ.pop("CODEX_CLI_RAW", None)
+            # Leave SEMHOST_CLI_DEBUG as-is if set globally
+        if req.disable_tools:
+            os.environ["ACTCLI_DISABLE_CLI_MCP"] = "1"
+        rr = await asyncio.to_thread(orch.run_current_round, prompt=req.prompt, seed=None, timeout_s=int(req.timeout_s))
+    finally:
+        if prev is None:
+            os.environ.pop("CODEX_CLI_RAW", None)
+        else:
+            os.environ["CODEX_CLI_RAW"] = prev
+        if prev_dbg is None:
+            os.environ.pop("SEMHOST_CLI_DEBUG", None)
+        else:
+            os.environ["SEMHOST_CLI_DEBUG"] = prev_dbg
+        if prev_mcp is None:
+            os.environ.pop("ACTCLI_DISABLE_CLI_MCP", None)
+        else:
+            os.environ["ACTCLI_DISABLE_CLI_MCP"] = prev_mcp
     if not rr.entries:
         raise HTTPException(status_code=500, detail="no entries returned")
     e = rr.entries[0]
@@ -51,4 +85,3 @@ async def chat_one_route(req: ChatOneRequest) -> ChatOneResponse:
         error=e.error,
         params_snapshot=e.params_snapshot,
     )
-

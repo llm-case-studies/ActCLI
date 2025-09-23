@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import shutil
 from typing import Optional
+import os
 import json
 
 
@@ -67,6 +68,14 @@ class CodexCLIAdapter:
             if r in ("minimal", "low", "medium", "high"):
                 reasoning_phrase = f"gpt-5 {r}"
 
+        # Build environment with optional tool/MCP disable
+        env = os.environ.copy()
+        if env.get("ACTCLI_DISABLE_CLI_MCP") == "1":
+            env["NO_MCP"] = "1"
+            env["CODEX_DISABLE_MCP"] = "1"
+            env["MCP_CONFIG"] = ""
+            env["MCP_ENDPOINTS"] = ""
+
         attempts = [
             ["codex", "exec", "--model", model, full_prompt],
             ["codex", "--model", model, full_prompt],
@@ -78,7 +87,7 @@ class CodexCLIAdapter:
         # Try direct model flag forms first
         for i, cmd in enumerate(attempts[:2]):
             try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
                 if res.returncode == 0 and (res.stdout or "").strip():
                     break
             except subprocess.TimeoutExpired:
@@ -93,13 +102,13 @@ class CodexCLIAdapter:
             if (model and model != "default") or reasoning_phrase:
                 try:
                     target = reasoning_phrase or model
-                    subprocess.run(["codex", "/model", target], capture_output=True, text=True, timeout=min(8, timeout_s))
+                    subprocess.run(["codex", "/model", target], capture_output=True, text=True, timeout=min(8, timeout_s), env=env)
                     pre_switched = True
                 except Exception:
                     pre_switched = False
             # Final attempt with default exec
             try:
-                res = subprocess.run(["codex", "exec", full_prompt], capture_output=True, text=True, timeout=timeout_s)
+                res = subprocess.run(["codex", "exec", full_prompt], capture_output=True, text=True, timeout=timeout_s, env=env)
             except subprocess.TimeoutExpired:
                 raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
             except Exception as e:
@@ -110,6 +119,12 @@ class CodexCLIAdapter:
             raise RuntimeError(f"Codex CLI failed: {err}")
 
         raw = (res.stdout or "").strip()
+        # Debug: allow returning raw stdout/stderr to diagnose parsing issues
+        if os.getenv("CODEX_CLI_RAW") == "1" or os.getenv("SEMHOST_CLI_DEBUG", "").lower() in ("1", "true", "yes"): 
+            dbg = raw
+            if (res.stderr or "").strip():
+                dbg += "\n\n[stderr]\n" + res.stderr.strip()
+            return dbg.strip() or "(empty)"
         # Try JSON first if available (some builds support structured output)
         if raw.startswith("{") or raw.startswith("["):
             try:

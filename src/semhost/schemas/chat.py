@@ -14,6 +14,8 @@ class ChatOneRequest(BaseModel):
     prompt: str
     bound_params: Optional[BoundParams] = None
     timeout_s: int = Field(default=25, ge=1)
+    raw: bool = Field(default=True, description="Return raw CLI output when available (for debugging)")
+    disable_tools: bool = Field(default=True, description="Best-effort: disable vendor CLI MCP/tools for speed and audit control")
 
 
 class ChatOneResponse(BaseModel):
@@ -24,4 +26,3 @@ class ChatOneResponse(BaseModel):
     text: Optional[str] = None
     error: Optional[str] = None
     params_snapshot: Optional[dict] = None
-
