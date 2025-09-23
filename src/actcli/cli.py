@@ -10,6 +10,7 @@ from rich.text import Text
 
 from .version import __version__
 from .config import load_config
+from pathlib import Path
 
 # Subcommands are loaded lazily to keep import costs low
 
@@ -248,6 +249,32 @@ def presenter(
         console.print(f"Prepared presenter files at: {root}")
     else:
         raise SystemExit("Unknown action. Use: start|prepare")
+
+
+@app.command()
+def excel(
+    action: str = typer.Argument("explore", help="explore"),
+    workbook: str = typer.Argument(..., help="Path to .xlsx/.xlsm (no execution)"),
+    out: Optional[str] = typer.Option(None, "--out", help="Write JSON report to path (e.g., out/excel/explorer.json)"),
+) -> None:
+    """Excel Explorer — inspect workbooks safely without executing macros."""
+    if action != "explore":
+        raise SystemExit("Unknown action. Use: explore")
+    try:
+        from .excel.explorer import inspect_workbook, write_report_json, ExcelDepsMissing
+        payload = inspect_workbook(workbook)
+        if out:
+            out_path = Path(out)
+            write_report_json(payload, out_path)
+            console.print(f"Wrote explorer report to: {out_path}")
+        else:
+            console.print_json(data=payload)
+    except ExcelDepsMissing as e:
+        console.print(f"[red]{e}[/red]")
+        raise SystemExit(2)
+    except FileNotFoundError:
+        console.print(f"[red]Workbook not found: {workbook}[/red]")
+        raise SystemExit(2)
 
 def main() -> None:
     app()

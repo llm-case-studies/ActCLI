@@ -11,6 +11,7 @@ from ..schemas.providers import (
     CliModelSwitchRequest,
     CliModelSwitchResponse,
 )
+from ..deps import get_settings
 
 
 def _which(cmd: str) -> str | None:
@@ -96,11 +97,13 @@ def providers_doctor_rows() -> List[DoctorRow]:
 
 
 def providers_login(req: CliLoginRequest) -> CliLoginResponse:
+    st = get_settings()
     if req.provider == "codex_cli":
         if not _which("codex"):
             return CliLoginResponse(launched=False, hint="codex binary not found; npm i -g @openai/codex")
         try:
             # Non-blocking spawn; user completes interactively in terminal
+            stderr = None if not st.cli_debug else None
             subprocess.Popen(["codex"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return CliLoginResponse(launched=True)
         except Exception as e:
@@ -129,6 +132,7 @@ def providers_login(req: CliLoginRequest) -> CliLoginResponse:
 
 
 def providers_switch_model(req: CliModelSwitchRequest) -> CliModelSwitchResponse:
+    st = get_settings()
     prov = req.provider
     model = req.model.strip()
     try:
@@ -138,7 +142,10 @@ def providers_switch_model(req: CliModelSwitchRequest) -> CliModelSwitchResponse
             p = subprocess.run(["codex", "/model", model], capture_output=True, text=True, timeout=8)
             if p.returncode == 0:
                 return CliModelSwitchResponse(ok=True)
-            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+            hint = (p.stderr or p.stdout or "failed").strip()
+            if not st.cli_debug:
+                hint = hint[:160]
+            return CliModelSwitchResponse(ok=False, hint=hint)
         if prov == "gemini_cli":
             if not _which("gemini"):
                 return CliModelSwitchResponse(ok=False, hint="gemini binary not found")
@@ -146,7 +153,10 @@ def providers_switch_model(req: CliModelSwitchRequest) -> CliModelSwitchResponse
             p = subprocess.run(["gemini", "-p", "test", "--model", model], capture_output=True, text=True, timeout=8)
             if p.returncode == 0:
                 return CliModelSwitchResponse(ok=True)
-            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+            hint = (p.stderr or p.stdout or "failed").strip()
+            if not st.cli_debug:
+                hint = hint[:160]
+            return CliModelSwitchResponse(ok=False, hint=hint)
         if prov == "claude_cli":
             if not _which("claude"):
                 return CliModelSwitchResponse(ok=False, hint="claude binary not found")
@@ -154,7 +164,10 @@ def providers_switch_model(req: CliModelSwitchRequest) -> CliModelSwitchResponse
             p = subprocess.run(["claude", "-p", "test", "--output-format", "json", "--model", model], capture_output=True, text=True, timeout=8)
             if p.returncode == 0:
                 return CliModelSwitchResponse(ok=True)
-            return CliModelSwitchResponse(ok=False, hint=(p.stderr or p.stdout or "failed").strip()[:160])
+            hint = (p.stderr or p.stdout or "failed").strip()
+            if not st.cli_debug:
+                hint = hint[:160]
+            return CliModelSwitchResponse(ok=False, hint=hint)
     except subprocess.TimeoutExpired:
         return CliModelSwitchResponse(ok=False, hint="probe timeout")
     except Exception as e:
