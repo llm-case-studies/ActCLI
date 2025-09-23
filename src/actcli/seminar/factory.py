@@ -8,6 +8,7 @@ from .adapters.ollama import OllamaAdapter
 from .adapters.openai import OpenAIAdapter
 from .adapters.anthropic import AnthropicAdapter
 from .adapters.codex_cli import CodexCLIAdapter
+from .adapters.gemini_cli import GeminiCLIAdapter
 from .adapters.claude_cli import ClaudeCLIAdapter
 from .adapters.gemini import GeminiAdapter
 from .adapters.echo import EchoAdapter
@@ -20,6 +21,7 @@ class BoundParams:
     system: Optional[str] = None
     timeout_s: Optional[int] = None
     temperature: Optional[float] = None  # reserved; some adapters may not support
+    reasoning: Optional[str] = None  # minimal|low|medium|high (provider-specific)
 
 
 class BoundAdapter:
@@ -52,6 +54,7 @@ class BoundAdapter:
         temp_val = self._bound.temperature if self._bound.temperature is not None else temperature
         # Scheduler enforces outer timeout; we still pass the bound value for adapter internals
         tmo = self._bound.timeout_s if self._bound.timeout_s is not None else timeout_s
+        # Attempt full signature including optional parameters some adapters may not support
         try:
             return self._base.generate(
                 prompt,
@@ -61,17 +64,30 @@ class BoundAdapter:
                 timeout_s=int(tmo),
                 round_index=round_index,
                 context_snippets=context_snippets,
+                reasoning=self._bound.reasoning,  # type: ignore[arg-type]
             )
         except TypeError:
-            # Backward compatibility for adapters without temperature support
-            return self._base.generate(
-                prompt,
-                system=sys_val or "",
-                seed=seed_val,
-                timeout_s=int(tmo),
-                round_index=round_index,
-                context_snippets=context_snippets,
-            )
+            # Fallback without reasoning
+            try:
+                return self._base.generate(
+                    prompt,
+                    system=sys_val or "",
+                    seed=seed_val,
+                    temperature=temp_val,
+                    timeout_s=int(tmo),
+                    round_index=round_index,
+                    context_snippets=context_snippets,
+                )
+            except TypeError:
+                # Fallback without temperature (legacy adapters)
+                return self._base.generate(
+                    prompt,
+                    system=sys_val or "",
+                    seed=seed_val,
+                    timeout_s=int(tmo),
+                    round_index=round_index,
+                    context_snippets=context_snippets,
+                )
 
 
 class AdapterFactory:
@@ -84,6 +100,7 @@ class AdapterFactory:
             system=str(spec.params.get("system")) if spec.params.get("system") is not None else None,
             timeout_s=int(spec.params.get("timeout_s")) if isinstance(spec.params.get("timeout_s"), int) else None,
             temperature=float(spec.params.get("temperature")) if isinstance(spec.params.get("temperature"), float) else None,
+            reasoning=str(spec.params.get("reasoning")).lower() if isinstance(spec.params.get("reasoning"), str) else None,
         )
         base: ModelAdapter
         try:
@@ -103,6 +120,9 @@ class AdapterFactory:
             elif provider == "codex_cli":
                 # OpenAI Codex CLI (subscription-backed); model id is a label only
                 base = CodexCLIAdapter(model=spec.model_id or "default")
+            elif provider == "gemini_cli":
+                # Gemini CLI shim (subscription-backed or API key); always allowed since it's user's own subscription
+                base = GeminiCLIAdapter(model=spec.model_id or "gemini-1.5-flash")
             elif provider == "google":
                 if not allow_cloud:
                     return BoundAdapter(EchoAdapter(name=f"{alias or spec.model_id}(cloud-blocked)"), alias=alias or "google", params=params)

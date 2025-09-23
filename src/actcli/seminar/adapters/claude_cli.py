@@ -4,6 +4,7 @@ import subprocess
 import json
 import shutil
 from typing import Optional
+import os
 
 
 class ClaudeCLIAdapter:
@@ -36,9 +37,16 @@ class ClaudeCLIAdapter:
 
         # Test authentication by making a simple call
         try:
+            env = os.environ.copy()
+            if env.get("ACTCLI_DISABLE_CLI_MCP") == "1":
+                env["NO_MCP"] = "1"
+                env["CLAUDE_CLI_DISABLE_TOOLS"] = "1"
+                env["CLAUDE_DISABLE_MCP"] = "1"
+                env["MCP_CONFIG"] = ""
+                env["MCP_ENDPOINTS"] = ""
             test_result = subprocess.run([
                 "claude", "-p", "test", "--output-format", "json"
-            ], capture_output=True, text=True, timeout=10)
+            ], capture_output=True, text=True, timeout=10, env=env)
 
             if test_result.returncode != 0:
                 raise RuntimeError(
@@ -84,7 +92,14 @@ class ClaudeCLIAdapter:
         # These could be added to the prompt if needed for specific use cases
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+            env = os.environ.copy()
+            if env.get("ACTCLI_DISABLE_CLI_MCP") == "1":
+                env["NO_MCP"] = "1"
+                env["CLAUDE_CLI_DISABLE_TOOLS"] = "1"
+                env["CLAUDE_DISABLE_MCP"] = "1"
+                env["MCP_CONFIG"] = ""
+                env["MCP_ENDPOINTS"] = ""
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
 
             if result.returncode != 0:
                 error_msg = result.stderr.strip() if result.stderr else "Unknown Claude CLI error"

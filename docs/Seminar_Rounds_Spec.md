@@ -37,6 +37,22 @@ Persistence
 - Per round: `out/sessions/<id>/round-<n>.json`
 - Rolling: `out/sessions/<id>/session.json`
 
+Profiles: Fast vs Deep
+- Fast (recommended for live seminars)
+  - Codex: `gpt-4o-mini` or `gpt-5-codex`
+  - Claude CLI: `claude-3-5-sonnet-20241022` (fast, balanced)
+  - Gemini API: `gemini-1.5-flash-latest`
+  - Use `reasoning=minimal|low` for GPT‑5 (via Codex `/model` menu); our Codex adapter also attempts per‑call model selection.
+- Deep (longer latency, high reasoning)
+  - Codex: GPT‑5 with `reasoning=high` (via `/model`)
+  - Anthropic Opus‑class or larger local LLMs
+  - Increase `timeout_s` per participant if needed
+
+Examples (participant specs)
+- `codex_cli:gpt-4o-mini?reasoning=minimal`
+- `claude_cli:claude-3-5-sonnet-20241022`
+- `google:gemini-1.5-flash-latest`
+
 Scaffold
 - `src/actcli/seminar/rounds.py` — RoundOrchestrator with start/next/stop and context builder (signatures only)
 - `src/actcli/seminar/moods.py` — presets + apply helper (no side effects)
@@ -49,4 +65,3 @@ Tests (scaffold)
 
 Acceptance (for full implementation)
 - Barrier‑synchronized rounds, windowed context, moods/temperature applied, policy honored, REPL commands operative, session files persisted.
-

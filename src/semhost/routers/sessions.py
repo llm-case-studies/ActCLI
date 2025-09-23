@@ -38,6 +38,32 @@ async def create_session_route(req: SessionCreate) -> Dict[str, str]:
     return {"session_id": wrapper.orchestrator.state.id}
 
 
+@router.get("/sessions", response_model=list[dict])
+async def list_sessions_route() -> list[dict]:
+    """Return in-memory sessions with basic metadata for picker UIs.
+
+    Shape: [{ id, created_at, participants, round_idx }]
+    """
+    items: list[dict] = []
+    # Best-effort: iterate over known ids (internal registry)
+    try:
+        for sid, wrapper in getattr(_REGISTRY, "_by_id", {}).items():
+            st = wrapper.orchestrator.state
+            items.append(
+                {
+                    "id": st.id,
+                    "created_at": st.started_at,
+                    "participants": list(st.participants.keys()),
+                    "round_idx": st.round_idx,
+                }
+            )
+    except Exception:
+        pass
+    # Newest first
+    items.sort(key=lambda x: x.get("created_at", 0.0), reverse=True)
+    return items
+
+
 @router.get("/sessions/{session_id}", response_model=SessionSnapshot)
 async def get_session_route(session_id: str) -> SessionSnapshot:
     wrapper = _REGISTRY.get(session_id)

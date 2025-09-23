@@ -10,6 +10,7 @@ from rich.text import Text
 
 from .version import __version__
 from .config import load_config
+from pathlib import Path
 
 # Subcommands are loaded lazily to keep import costs low
 
@@ -248,6 +249,79 @@ def presenter(
         console.print(f"Prepared presenter files at: {root}")
     else:
         raise SystemExit("Unknown action. Use: start|prepare")
+
+
+@app.command()
+def server(
+    action: str = typer.Argument("start", help="start|status|stop|logs"),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(7530, "--port"),
+    reload: bool = typer.Option(True, "--reload/--no-reload"),
+    with_ui: bool = typer.Option(True, "--with-ui/--no-ui"),
+    tail: bool = typer.Option(False, "--tail", help="Tail logs (for logs action)"),
+) -> None:
+    """Control the Semhost server (FastAPI)."""
+    from .commands.server import server_start, server_status, server_stop, server_logs
+
+    if action == "start":
+        server_start(host=host, port=port, reload=reload, with_ui=with_ui)
+    elif action == "status":
+        server_status(host=host, port=port)
+    elif action == "stop":
+        server_stop()
+    elif action == "logs":
+        server_logs(tail=tail)
+    else:
+        raise SystemExit("Unknown action. Use: start|status|stop|logs")
+
+
+@app.command()
+def spa(action: str = typer.Argument("dev", help="dev|build|preview")) -> None:
+    """Manage the SPA (dev server/build)."""
+    import shutil, subprocess
+    if action == "dev":
+        if not shutil.which("npm"):
+            raise SystemExit("npm not found; install Node.js to run SPA dev server")
+        subprocess.Popen(["npm", "run", "dev", "--prefix", "studio"])  # non-blocking
+        console.print("SPA dev server starting at http://127.0.0.1:5173 (default)")
+    elif action == "build":
+        if not shutil.which("npm"):
+            raise SystemExit("npm not found; install Node.js to build SPA")
+        subprocess.check_call(["npm", "run", "build", "--prefix", "studio"])  # blocking build
+        console.print("Built SPA to studio/dist. Semhost will serve it at /ui.")
+    elif action == "preview":
+        if not shutil.which("npm"):
+            raise SystemExit("npm not found; install Node.js to preview SPA")
+        subprocess.Popen(["npm", "run", "preview", "--prefix", "studio"])  # non-blocking
+        console.print("SPA preview server starting (defaults to 5173)")
+    else:
+        raise SystemExit("Unknown action. Use: dev|build|preview")
+
+
+@app.command()
+def excel(
+    action: str = typer.Argument("explore", help="explore"),
+    workbook: str = typer.Argument(..., help="Path to .xlsx/.xlsm (no execution)"),
+    out: Optional[str] = typer.Option(None, "--out", help="Write JSON report to path (e.g., out/excel/explorer.json)"),
+) -> None:
+    """Excel Explorer — inspect workbooks safely without executing macros."""
+    if action != "explore":
+        raise SystemExit("Unknown action. Use: explore")
+    try:
+        from .excel.explorer import inspect_workbook, write_report_json, ExcelDepsMissing
+        payload = inspect_workbook(workbook)
+        if out:
+            out_path = Path(out)
+            write_report_json(payload, out_path)
+            console.print(f"Wrote explorer report to: {out_path}")
+        else:
+            console.print_json(data=payload)
+    except ExcelDepsMissing as e:
+        console.print(f"[red]{e}[/red]")
+        raise SystemExit(2)
+    except FileNotFoundError:
+        console.print(f"[red]Workbook not found: {workbook}[/red]")
+        raise SystemExit(2)
 
 def main() -> None:
     app()

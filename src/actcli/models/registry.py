@@ -13,7 +13,7 @@ from platformdirs import user_config_dir
 
 
 CACHE_DIR = Path(user_config_dir("actcli", "actcli")) / "cache" / "models"
-CLOUD_PROVIDERS = {"openai", "anthropic", "google", "claude_cli", "codex_cli"}
+CLOUD_PROVIDERS = {"openai", "anthropic", "google", "claude_cli", "codex_cli", "gemini_cli"}
 
 
 @dataclass
@@ -249,4 +249,29 @@ def list_models_codex_cli(refresh: bool = False) -> List[ModelDescriptor]:
         )
     ]
     cache_write("codex_cli", {"models": [vars(m) for m in models]})
+    return models
+
+
+def list_models_gemini_cli(refresh: bool = False) -> List[ModelDescriptor]:
+    """List Gemini CLI available model(s).
+
+    The official Gemini CLI is evolving; we expose a single default profile.
+    """
+    cache = cache_read("gemini_cli")
+    if not refresh and not is_stale(cache):
+        return [ModelDescriptor(**m) for m in cache.get("models", [])]
+
+    if not shutil.which("gemini"):
+        return []
+
+    models = [
+        ModelDescriptor(
+            provider="gemini_cli",
+            model_id="default",
+            display_name="Gemini CLI default",
+            capabilities={"generate": True},
+            cost_tier="subscription",
+        )
+    ]
+    cache_write("gemini_cli", {"models": [vars(m) for m in models]})
     return models

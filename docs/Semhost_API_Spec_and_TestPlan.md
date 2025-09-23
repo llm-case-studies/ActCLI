@@ -68,6 +68,7 @@ OpenAPI & Docs
 - OpenAPI JSON: `GET /openapi.json`
 - Swagger UI: `GET /docs`
 - ReDoc: `GET /redoc`
+ - Static UI: serve SPA dist at `/ui` when built (studio/dist)
 
 Status
 - `GET /health` → `{ ok: true, version: string }`
@@ -101,6 +102,12 @@ Sessions & Rounds
 - WS `GET /sessions/{id}/stream`
   - Events: `session_start, round_start, turn_result, round_end, artifacts_saved, error`
 
+History & Sessions (new)
+- `GET /history?provider=&id=&limit=50` → newest-first usage for a given provider:id
+  - Response items: `{ session_id, session_created_at, round_index, alias, ok, latency_ms, text_excerpt, started_at }`
+  - Implementation: scan `out/sessions/<id>/round-*.json`, best-effort, skip unreadable files
+- Optional `GET /sessions` → in-memory sessions: `[{ id, created_at, participants, round_idx }]`
+
 Ollama (optional)
 - `GET /ollama/tags` → passthrough to configured host
 - `POST /ollama/pull` body: `{ name: string }` → streaming progress (SSE)
@@ -115,6 +122,11 @@ Ollama (optional)
 - CLI preferred: HTTP to semhost (configurable via `--server http://127.0.0.1:7530`), fallback to in-proc when offline.
 - SPA (VSCode layout): left sidebar (Models, Seminar, MCP, Locations, Status); main area (Live grid, Prompt, Event log).
 - Both surfaces share semhost as backend; artifacts/policy are consistent.
+
+Chat One (clarifications)
+- `POST /chat/one` body: `{ provider, id, prompt, timeout_s?, raw=true, disable_tools=true }`
+  - `timeout_s` is a scheduler cap (top-level); `bound_params.timeout_s` is ignored for 1×1
+  - `raw=true` by default for debug; `disable_tools=true` by default for speed/audit control (best-effort)
 
 ## Security & Privacy
 - Bind default `127.0.0.1:7530`; CORS restricted to SPA origin.
@@ -152,6 +164,7 @@ SPA e2e (Playwright)
 - Status pane: toggle MODE/HYBRID and cloud_share; Models table updates availability
 - MCP pane: toggle server; state persists
 - Locations pane: edit read/write globs; PATCH reflected by GET
+ - Detail View: open on model click; shows pricing/history; run 1×1; add to seminar; CLI switch
 
 Contract tests
 - CLI doctor probes: simulate codex/claude subprocess; assert `ok/no/missing`

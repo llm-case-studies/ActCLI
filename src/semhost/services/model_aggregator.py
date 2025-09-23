@@ -11,6 +11,7 @@ from actcli.models.registry import (
     list_models_google,
     list_models_ollama,
     list_models_openai,
+    list_models_gemini_cli,
 )
 
 from ..schemas.models import ModelItem
@@ -126,6 +127,7 @@ def aggregate_models(settings: SemhostSettings, status: Status) -> List[ModelIte
     for provider, func, bin_name in (
         ("claude_cli", list_models_claude_cli, "claude"),
         ("codex_cli", list_models_codex_cli, "codex"),
+        ("gemini_cli", list_models_gemini_cli, "gemini"),
     ):
         try:
             rows = func(refresh=False)

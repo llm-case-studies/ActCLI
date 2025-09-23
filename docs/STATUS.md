@@ -24,7 +24,13 @@ This snapshot summarizes what is working now and what’s next.
 - REPL /mcp ui (TUI) and arrow‑key first‑run wizard.
 - Persist /allow and /deny to actcli.toml.
 - Optional events.ndjson for Presenter timeline.
+ - Sprint 4: Pricing + Export (spec in docs/API_Extensions_Sprint4.md)
  - Semhost Sprint 3: MCP + Locations
+ - SPA: Model Detail View (pricing/history/actions)
+ - SPA: WS backoff + offline banner + retry
+ - SPA: Ollama tags panel + pull with streaming progress
+ - SPA: Seminar participants table + presets + Advanced JSON toggle
+ - SPA: Models/Providers badges + sort/filter + “use fast profile” action
 
 ## Usage Highlights
 - Start: `actcli` → wizard → REPL. Help: `/help`.

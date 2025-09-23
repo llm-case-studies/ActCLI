@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 import shutil
 from typing import Optional
+import os
+import json
 
 
 class CodexCLIAdapter:
@@ -13,8 +15,11 @@ class CodexCLIAdapter:
     - User signed in: run `codex` and choose "Sign in with ChatGPT"
 
     Notes:
-    - Codex CLI doesn't reliably support a `--model` flag across versions; selection is interactive via `codex /model`.
-    - We treat `model` value as a label; execution uses the active CLI model.
+    - Codex CLI model selection varies by version. We attempt, in order:
+      1) `codex exec --model <model> <prompt>` (newer versions)
+      2) `codex --model <model> <prompt>` (some builds)
+      3) `codex /model <model>` pre-step, then `codex exec <prompt>` (fallback)
+    - If none succeed, we fall back to the active CLI model.
     - System/temperature/seed are not first-class CLI flags; we fold system into the prompt.
     """
 
@@ -40,6 +45,7 @@ class CodexCLIAdapter:
         timeout_s: int = 30,
         round_index: int = 1,
         context_snippets: Optional[str] = None,
+        reasoning: Optional[str] = None,
     ) -> str:
         # Compose prompt with simple round/context shaping
         if round_index == 1:
@@ -54,34 +60,101 @@ class CodexCLIAdapter:
         if system:
             full_prompt = f"System: {system}\n\nUser: {full_prompt}"
 
-        cmd = ["codex", "exec", full_prompt]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
-        except Exception as e:
-            raise RuntimeError(f"Codex CLI error: {e}")
+        # Decide model and reasoning phrase
+        model = self.model
+        reasoning_phrase = None
+        if reasoning and model.startswith("gpt-5"):
+            r = reasoning.strip().lower()
+            if r in ("minimal", "low", "medium", "high"):
+                reasoning_phrase = f"gpt-5 {r}"
 
-        if res.returncode != 0:
+        # Build environment with optional tool/MCP disable
+        env = os.environ.copy()
+        if env.get("ACTCLI_DISABLE_CLI_MCP") == "1":
+            env["NO_MCP"] = "1"
+            env["CODEX_DISABLE_MCP"] = "1"
+            env["MCP_CONFIG"] = ""
+            env["MCP_ENDPOINTS"] = ""
+
+        attempts = [
+            ["codex", "exec", "--model", model, full_prompt],
+            ["codex", "--model", model, full_prompt],
+            ["codex", "exec", full_prompt],  # default (after possible pre-step)
+        ]
+
+        pre_switched = False
+        res = None
+        # Try direct model flag forms first
+        for i, cmd in enumerate(attempts[:2]):
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
+                if res.returncode == 0 and (res.stdout or "").strip():
+                    break
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
+            except Exception:
+                # Try next form
+                res = None
+                continue
+
+        # If both flag forms failed, try pre-switching the model (and reasoning) once
+        if res is None or res.returncode != 0:
+            if (model and model != "default") or reasoning_phrase:
+                try:
+                    target = reasoning_phrase or model
+                    subprocess.run(["codex", "/model", target], capture_output=True, text=True, timeout=min(8, timeout_s), env=env)
+                    pre_switched = True
+                except Exception:
+                    pre_switched = False
+            # Final attempt with default exec
+            try:
+                res = subprocess.run(["codex", "exec", full_prompt], capture_output=True, text=True, timeout=timeout_s, env=env)
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(f"Codex CLI timeout after {timeout_s}s")
+            except Exception as e:
+                raise RuntimeError(f"Codex CLI error: {e}")
+
+        if res is None or res.returncode != 0:
             err = res.stderr.strip() or res.stdout.strip() or "unknown error"
             raise RuntimeError(f"Codex CLI failed: {err}")
 
-        # Parse output: prefer the last non-empty block without leading metadata brackets
-        text = res.stdout or ""
-        lines = [ln.rstrip() for ln in text.splitlines()]
-        # Collect contiguous blocks of "content-like" lines
+        raw = (res.stdout or "").strip()
+        # Debug: allow returning raw stdout/stderr to diagnose parsing issues
+        if os.getenv("CODEX_CLI_RAW") == "1" or os.getenv("SEMHOST_CLI_DEBUG", "").lower() in ("1", "true", "yes"): 
+            dbg = raw
+            if (res.stderr or "").strip():
+                dbg += "\n\n[stderr]\n" + res.stderr.strip()
+            return dbg.strip() or "(empty)"
+        # Try JSON first if available (some builds support structured output)
+        if raw.startswith("{") or raw.startswith("["):
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    for key in ("result", "text", "output", "content"):
+                        if isinstance(data.get(key), str) and data.get(key).strip():
+                            return data[key].strip()
+            except Exception:
+                pass
+
+        # Fallback: extract the most substantial content that is not just echo
+        lines = [ln.rstrip() for ln in raw.splitlines()]
         blocks: list[list[str]] = []
         cur: list[str] = []
+
         def is_content(ln: str) -> bool:
-            if not ln.strip():
+            s = ln.strip()
+            if not s:
                 return False
-            if ln.lstrip().startswith("["):
+            if s == prompt.strip() or s.startswith("Original prompt:") or s.startswith("System:"):
                 return False
-            if ln.startswith("workdir:") or ln.startswith("model:") or ln.startswith("provider:") or ln.startswith("approval:"):
+            if s.lstrip().startswith("["):
                 return False
-            if ln.startswith("User instructions:") or ln.startswith("--------"):
+            if s.startswith("workdir:") or s.startswith("model:") or s.startswith("provider:") or s.startswith("approval:"):
+                return False
+            if s.startswith("User instructions:") or s.startswith("--------"):
                 return False
             return True
+
         for ln in lines:
             if is_content(ln):
                 cur.append(ln)
@@ -92,8 +165,8 @@ class CodexCLIAdapter:
         if cur:
             blocks.append(cur)
         if not blocks:
-            return text.strip()
-        # Use the last block as the answer
-        out = "\n".join(blocks[-1]).strip()
-        return out or text.strip()
-
+            return raw
+        # Choose the longest block by character count (less likely to be an echo)
+        out_block = max(blocks, key=lambda b: sum(len(x) for x in b))
+        out = "\n".join(out_block).strip()
+        return out or raw
