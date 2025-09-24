@@ -142,6 +142,26 @@ async def mcp_route(
                     update_status(StatusPatch(mode="OFFLINE", cloud_share=False))
                 # Hint via header for clients
                 response.headers["X-ActCLI-Mode"] = "OFFLINE"
+                # Append audit event
+                try:
+                    from pathlib import Path as _P
+                    import json as _json, time as _time
+                    audit_path = _P('out') / 'audit.json'
+                    try:
+                        existing = _json.loads(audit_path.read_text(encoding='utf-8'))
+                        if not isinstance(existing, list):
+                            existing = []
+                    except Exception:
+                        existing = []
+                    existing.append({
+                        "event": "mode_lock_local",
+                        "session": sid,
+                        "ts": int(_time.time()),
+                        "path": pth,
+                    })
+                    audit_path.write_text(_json.dumps(existing, indent=2), encoding='utf-8')
+                except Exception:
+                    pass
 
             jr = JOB_MANAGER.create(name, args)
             job_id = jr.id
