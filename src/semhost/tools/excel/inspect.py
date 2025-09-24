@@ -33,6 +33,7 @@ except Exception:  # pragma: no cover - optional
     VBA_Parser = None  # type: ignore
 
 from ...mcp.runtime import JOB_MANAGER
+from ...deps import get_status
 
 
 VOLATILE_FUNCS = (
@@ -65,6 +66,8 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
     - Emits progress events and a final result
     """
     t0 = time.time()
+    budget_s = int(params.get('budget_s', 120))
+    warned_80 = False
     path_s = str(params.get('path') or '')
     lint = bool(params.get('lint', True))
     extract_vba = bool(params.get('extract_vba', True))
@@ -94,6 +97,9 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
     out_root.mkdir(parents=True, exist_ok=True)
 
     yield {"event": "progress", "job": job_id, "pct": 10, "msg": "Opening workbook"}
+    if (time.time() - t0) > 0.8 * budget_s and not warned_80:
+        yield {"event": "warning", "job": job_id, "msg": "Approaching time budget (80%)"}
+        warned_80 = True
 
     # Basic type detection
     suffix = src.suffix.lower()
@@ -123,6 +129,10 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                     if total_uncomp > 500 * 1024 * 1024:  # 500MB
                         yield {"event": "fault", "job": job_id, "ok": False, "error": "zip too large (>500MB)"}
                         return
+                # Encrypted OOXML package (basic detection)
+                if 'EncryptionInfo' in names and not password:
+                    yield {"event": "fault", "job": job_id, "ok": False, "error": "PASSWORD_REQUIRED"}
+                    return
 
                 yield {"event": "progress", "job": job_id, "pct": 30, "msg": "Enumerating sheets & parts"}
                 ws_count = sum(1 for n in names if n.startswith('xl/worksheets/sheet') and n.endswith('.xml'))
@@ -145,12 +155,20 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                         pass
 
                 yield {"event": "progress", "job": job_id, "pct": 65, "msg": "Extracting VBA modules"}
+                vba_bins: List[Path] = []
                 if extract_vba and has_vba:
                     vba_dir.mkdir(parents=True, exist_ok=True)
                     for n in names:
                         if n.endswith('vbaProject.bin'):
                             try:
+                                outp = vba_dir / n
+                                outp.parent.mkdir(parents=True, exist_ok=True)
                                 z.extract(n, vba_dir)
+                                try:
+                                    os.chmod((vba_dir / n).resolve(), 0o640)
+                                except Exception:
+                                    pass
+                                vba_bins.append((vba_dir / n).resolve())
                             except Exception:
                                 pass
                 if suffix == '.xlsb':
@@ -161,7 +179,15 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
     elif suffix in ('.xls',):
         kind = 'biff8'
         notes.append('xls formula text limited; consider converting to xlsx')
-    else:
+        # Optional: count sheets via xlrd 1.2.0 if available
+        try:
+            import xlrd  # type: ignore
+            book = xlrd.open_workbook(str(src), on_demand=True)
+            ws_count = book.nsheets
+            book.release_resources()
+        except Exception:
+            notes.append('xlrd not available or failed (non-fatal)')
+    elif suffix not in ('.xlsx', '.xlsm', '.xltx', '.xltm', '.xlsb', '.xls'):
         notes.append('unrecognized extension; proceeding with minimal metadata')
 
     # Optional: scan formulas with openpyxl for xlsx/xlsm
@@ -185,12 +211,57 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                             for fn in VOLATILE_FUNCS:
                                 if fn in up:
                                     volatile_hits[fn] += 1
+                    # Budget/warning checks per row
+                    if (time.time() - t0) > 0.8 * budget_s and not warned_80:
+                        yield {"event": "warning", "job": job_id, "msg": "Approaching time budget (80%)"}
+                        warned_80 = True
+                    if (time.time() - t0) > budget_s:
+                        notes.append('formula scan truncated due to budget')
+                        wb.close()
+                        raise RuntimeError('budget_exceeded')
                 if JOB_MANAGER.is_cancelled(job_id):
                     yield {"event": "fault", "job": job_id, "ok": False, "error": "CANCELLED"}
                     return
             wb.close()
         except Exception:
             notes.append('openpyxl formula scan failed (non-fatal)')
+
+    # Optional: VBA analysis via oletools (no execution)
+    vba_summary = None
+    try:
+        if 'vba_bins' in locals() and VBA_Parser is not None and vba_bins:
+            risky_patterns = (
+                'CreateObject', 'GetObject', 'Shell', 'Application.Run', 'ExecuteExcel4Macro', 'Solver', 'ActiveX',
+            )
+            modules = set()
+            procedures = []
+            risky_calls = set()
+            import re
+            proc_re = re.compile(r"^\s*(Sub|Function)\s+([A-Za-z0-9_]+)\s*\(", re.IGNORECASE | re.MULTILINE)
+            for vb in vba_bins:
+                try:
+                    vp = VBA_Parser(str(vb))
+                    if vp.detect_vba_macros():
+                        for (_, _stream, vba_filename, vba_code) in vp.extract_all_macros():
+                            if vba_filename:
+                                modules.add(vba_filename)
+                            if isinstance(vba_code, str):
+                                for m in proc_re.finditer(vba_code):
+                                    kind, name = m.group(1), m.group(2)
+                                    procedures.append({"module": vba_filename or "", "name": name, "kind": kind})
+                                up = vba_code
+                                for pat in risky_patterns:
+                                    if pat in up:
+                                        risky_calls.add(pat)
+                except Exception:
+                    continue
+            vba_summary = {
+                "modules": sorted(modules),
+                "procedures": procedures[:200],  # cap for MVP
+                "risky_calls": sorted(risky_calls),
+            }
+    except Exception:
+        notes.append('oletools VBA analysis failed (non-fatal)')
 
     yield {"event": "progress", "job": job_id, "pct": 80, "msg": "Computing hashes & writing reports"}
 
@@ -227,12 +298,25 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
         "external_links": external_links,
         "connections": connections_present,
         "notes": notes,
-        "flags": {"severity": severity, "issues": score},
+        "flags": {
+            "severity": severity,
+            "issues": score,
+            "breakdown": {
+                "has_macros": bool(has_vba),
+                "external_links": len(external_links) > 0,
+                "connections": bool(connections_present),
+                "volatile_ratio": vol_ratio,
+                "refs3d": refs_3d,
+            }
+        },
         "input_sha256": input_sha,
         "created_at": int(time.time()),
         "tool": "excel.inspect",
-        "params": {"lint": lint, "extract_vba": extract_vba, "password": bool(password)},
+        "params": {"lint": lint, "extract_vba": extract_vba, "password": bool(password), "budget_s": budget_s},
+        "mode": str(get_status().mode),
     }
+    if vba_summary is not None:
+        payload["vba"] = vba_summary
     preflight_json.write_text(json.dumps(payload, indent=2), encoding='utf-8')
     pre_md = [
         f"# Excel Preflight: {src.name}",
@@ -255,6 +339,39 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
             if p.is_file():
                 artifacts.append(p)
     artifact_entries = [{"path": str(_safe_rel(out_root, a)), "sha256": _sha256_file(a)} for a in artifacts]
+    # job.json and audit.json
+    try:
+        params_norm = {"path": str(src), "lint": lint, "extract_vba": extract_vba, "password": bool(password), "budget_s": budget_s}
+        params_hash = hashlib.sha256(json.dumps(params_norm, sort_keys=True).encode('utf-8')).hexdigest()
+        job = {
+            "tool": "excel.inspect",
+            "job_id": job_id,
+            "params_hash": params_hash,
+            "started_at": int(t0),
+            "completed_at": int(time.time()),
+            "ok": True,
+            "mode": str(get_status().mode),
+            "artifacts": artifact_entries,
+        }
+        (out_root / 'job.json').write_text(json.dumps(job, indent=2), encoding='utf-8')
+        audit_path = Path('out') / 'audit.json'
+        try:
+            existing = json.loads(audit_path.read_text(encoding='utf-8'))
+            if not isinstance(existing, list):
+                existing = []
+        except Exception:
+            existing = []
+        existing.append({
+            "job_id": job_id,
+            "tool": "excel.inspect",
+            "input_sha256": input_sha,
+            "flags": payload["flags"],
+            "artifacts": artifact_entries,
+            "ts": int(time.time()),
+        })
+        audit_path.write_text(json.dumps(existing, indent=2), encoding='utf-8')
+    except Exception:
+        pass
 
     yield {
         "event": "result",
