@@ -1,0 +1,269 @@
+{
+  "workbook": {
+    "path": "/examples/excel-legacy/macros/Well_Analyses.xlsm",
+    "kind": "xlsm",
+    "sha256": "8dedb91ad3cb7f84481f30690b45c899c30165a32a6ca01061e28b52ef22cd89",
+    "size_bytes": 430234,
+    "date_system": "1900",
+    "calc_mode": "auto",
+    "encrypted": false,
+    "application": "Microsoft Excel",
+    "last_saved_by": "USGS Automated",
+    "created": "2019-03-15T00:00:00Z"
+  },
+  "tree": [
+    {
+      "type": "vba",
+      "label": "VBA (3 modules, 12 procedures)",
+      "children": [
+        {
+          "type": "module",
+          "label": "ThisWorkbook",
+          "children": [
+            {
+              "type": "procedure",
+              "label": "Workbook_Open",
+              "detail": {
+                "kind": "Sub",
+                "lines": 8,
+                "autoexec": true,
+                "risky_tokens": [],
+                "visibility": "private"
+              },
+              "code_ref": "artifacts/vba/ThisWorkbook/Workbook_Open.bas"
+            }
+          ]
+        },
+        {
+          "type": "module",
+          "label": "Module1",
+          "children": [
+            {
+              "type": "procedure",
+              "label": "ProcessWellData",
+              "detail": {
+                "kind": "Sub",
+                "lines": 45,
+                "autoexec": false,
+                "risky_tokens": [],
+                "visibility": "public"
+              },
+              "code_ref": "artifacts/vba/Module1/ProcessWellData.bas"
+            },
+            {
+              "type": "procedure",
+              "label": "CalculateDrawdown",
+              "detail": {
+                "kind": "Function",
+                "lines": 23,
+                "autoexec": false,
+                "risky_tokens": [],
+                "visibility": "public",
+                "return_type": "Double"
+              },
+              "code_ref": "artifacts/vba/Module1/CalculateDrawdown.bas"
+            }
+          ]
+        },
+        {
+          "type": "module",
+          "label": "ChartModule",
+          "children": [
+            {
+              "type": "procedure",
+              "label": "UpdateHydrographs",
+              "detail": {
+                "kind": "Sub",
+                "lines": 67,
+                "autoexec": false,
+                "risky_tokens": ["CreateObject"],
+                "visibility": "public"
+              },
+              "code_ref": "artifacts/vba/ChartModule/UpdateHydrographs.bas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "named_ranges",
+      "label": "Named Ranges (18 total)",
+      "children": [
+        {
+          "type": "named_range",
+          "label": "WellData_Range",
+          "detail": {
+            "scope": "workbook",
+            "ref": "Data!$A$2:$Z$1000",
+            "formula": null,
+            "used_by_count": 12,
+            "hidden": false
+          }
+        },
+        {
+          "type": "named_range",
+          "label": "Pumping_Rate",
+          "detail": {
+            "scope": "Analysis",
+            "ref": "Analysis!$E$5",
+            "formula": null,
+            "used_by_count": 8,
+            "hidden": false
+          }
+        },
+        {
+          "type": "named_range",
+          "label": "Calc_Constants",
+          "detail": {
+            "scope": "workbook",
+            "ref": null,
+            "formula": "=Analysis!$B$2:$B$10",
+            "used_by_count": 5,
+            "hidden": true
+          }
+        }
+      ]
+    },
+    {
+      "type": "sheets",
+      "label": "Sheets (6 visible, 1 hidden)",
+      "children": [
+        {
+          "type": "sheet",
+          "label": "Instructions",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 234,
+            "formula_cells": 0,
+            "error_cells": 0,
+            "chart_objects": 0,
+            "pivot_tables": 0
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Data",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 12450,
+            "formula_cells": 0,
+            "error_cells": 0,
+            "chart_objects": 0,
+            "pivot_tables": 1
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Analysis",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 1876,
+            "formula_cells": 234,
+            "error_cells": 2,
+            "chart_objects": 3,
+            "pivot_tables": 0
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Results",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 567,
+            "formula_cells": 123,
+            "error_cells": 0,
+            "chart_objects": 2,
+            "pivot_tables": 0
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Charts",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 45,
+            "formula_cells": 12,
+            "error_cells": 0,
+            "chart_objects": 8,
+            "pivot_tables": 0
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Summary",
+          "detail": {
+            "visible": "visible",
+            "used_cells": 189,
+            "formula_cells": 45,
+            "error_cells": 0,
+            "chart_objects": 1,
+            "pivot_tables": 0
+          }
+        },
+        {
+          "type": "sheet",
+          "label": "Validation",
+          "detail": {
+            "visible": "hidden",
+            "used_cells": 2340,
+            "formula_cells": 567,
+            "error_cells": 1,
+            "chart_objects": 0,
+            "pivot_tables": 0
+          }
+        }
+      ]
+    },
+    {
+      "type": "formulas",
+      "label": "Formulas (981 total)",
+      "detail": {
+        "count": 981,
+        "families": [
+          {"pattern": "=VLOOKUP([@Well_ID],WellData_Range,{column},FALSE)", "count": 145},
+          {"pattern": "=IF(ISERROR({expr}),\"\",{expr})", "count": 89},
+          {"pattern": "=SUM(OFFSET(Data!$A$1,{row},{col},{height},1))", "count": 34},
+          {"pattern": "=LOG10(ABS({expr}))", "count": 23},
+          {"pattern": "=SQRT(SUMPRODUCT((Analysis!{range}-{value})^2))", "count": 12}
+        ],
+        "volatiles": [
+          {"func": "OFFSET", "count": 67},
+          {"func": "INDIRECT", "count": 23},
+          {"func": "TODAY", "count": 2},
+          {"func": "NOW", "count": 1}
+        ],
+        "dynamic_arrays": [],
+        "external_refs": [
+          {"kind": "workbook", "count": 0}
+        ],
+        "three_d_refs": 45,
+        "max_length": 234,
+        "max_depth": 8,
+        "error_types": ["#N/A", "#VALUE!"]
+      }
+    },
+    {
+      "type": "connections",
+      "label": "Connections (0)",
+      "children": []
+    },
+    {
+      "type": "power_query",
+      "label": "Power Query/Data Model",
+      "detail": {
+        "power_query_present": false,
+        "query_count": 0,
+        "data_model_present": false,
+        "power_pivot_present": false
+      }
+    }
+  ],
+  "notes": [],
+  "metadata": {
+    "explorer_version": "1.0.0-poc",
+    "analysis_time_ms": 2341,
+    "include_vba_source": true,
+    "max_formulas": 250000,
+    "hash_sensitive_strings": true
+  }
+}

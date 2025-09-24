@@ -11,6 +11,11 @@ from typing import Dict, List, Optional
 import httpx
 from platformdirs import user_config_dir
 
+from .discovery import (
+    discover_claude_cli_models_sync,
+    discover_codex_cli_models_sync,
+)
+
 
 CACHE_DIR = Path(user_config_dir("actcli", "actcli")) / "cache" / "models"
 CLOUD_PROVIDERS = {"openai", "anthropic", "google", "claude_cli", "codex_cli", "gemini_cli"}
@@ -166,71 +171,54 @@ def resolve_latest(provider: str, stem: str, *, openai_key: Optional[str] = None
     return None
 
 
-def list_models_claude_cli(refresh: bool = False) -> List[ModelDescriptor]:
-    """List Claude CLI available models.
+def list_models_claude_cli(refresh: bool = False, *, strict: bool = False) -> List[ModelDescriptor]:
+    """List Claude CLI models using dynamic discovery when possible.
 
-    Since Claude CLI doesn't have a direct model listing command,
-    we return the known available models and aliases.
+    Falls back to a minimal curated set if discovery is unavailable.
     """
     cache = cache_read("claude_cli")
     if not refresh and not is_stale(cache):
         return [ModelDescriptor(**m) for m in cache.get("models", [])]
 
-    # Check if Claude CLI is available
     if not shutil.which("claude"):
         return []
 
-    # Known Claude CLI models (as of 2025)
-    # These are based on the help text and common knowledge
-    known_models = [
-        # Aliases (recommended for latest versions)
-        ModelDescriptor(
-            provider="claude_cli",
-            model_id="sonnet",
-            display_name="sonnet (latest Sonnet)",
-            capabilities={"generate": True},
-            cost_tier="subscription"
-        ),
-        ModelDescriptor(
-            provider="claude_cli",
-            model_id="opus",
-            display_name="opus (latest Opus)",
-            capabilities={"generate": True},
-            cost_tier="subscription"
-        ),
-        # Full model names (examples - these may change)
-        ModelDescriptor(
-            provider="claude_cli",
-            model_id="claude-3-5-sonnet-20241022",
-            display_name="claude-3-5-sonnet-20241022",
-            capabilities={"generate": True},
-            cost_tier="subscription"
-        ),
-        ModelDescriptor(
-            provider="claude_cli",
-            model_id="claude-3-opus-20240229",
-            display_name="claude-3-opus-20240229",
-            capabilities={"generate": True},
-            cost_tier="subscription"
-        ),
-        ModelDescriptor(
-            provider="claude_cli",
-            model_id="claude-3-haiku-20240307",
-            display_name="claude-3-haiku-20240307",
-            capabilities={"generate": True},
-            cost_tier="subscription"
-        ),
-    ]
+    # Try dynamic discovery via interactive /model menu
+    discovered = []
+    try:
+        from .discovery import ModelInfo  # local import to avoid cycle in type hints
+        infos = discover_claude_cli_models_sync()
+        for mi in infos:
+            discovered.append(
+                ModelDescriptor(
+                    provider="claude_cli",
+                    model_id=mi.id,
+                    display_name=mi.display_name,
+                    capabilities={"generate": True},
+                    cost_tier="subscription",
+                )
+            )
+    except Exception:
+        discovered = []
 
-    cache_write("claude_cli", {"models": [vars(m) for m in known_models]})
-    return known_models
+    if not discovered:
+        # Fallback minimal set (aliases + one concrete)
+        if strict:
+            discovered = []
+        else:
+            discovered = [
+                ModelDescriptor(provider="claude_cli", model_id="sonnet", display_name="sonnet (latest)", capabilities={"generate": True}, cost_tier="subscription"),
+                ModelDescriptor(provider="claude_cli", model_id="claude-3-5-sonnet-20241022", display_name="claude-3-5-sonnet-20241022", capabilities={"generate": True}, cost_tier="subscription"),
+            ]
+
+    cache_write("claude_cli", {"models": [vars(m) for m in discovered]})
+    return discovered
 
 
-def list_models_codex_cli(refresh: bool = False) -> List[ModelDescriptor]:
-    """List Codex CLI available model(s).
+def list_models_codex_cli(refresh: bool = False, *, strict: bool = False) -> List[ModelDescriptor]:
+    """List Codex CLI models using dynamic discovery when possible.
 
-    Codex CLI typically uses a session-selected default model; we expose a single
-    descriptor and guide users to `codex /model` to switch interactively.
+    Includes the session default entry for compatibility.
     """
     cache = cache_read("codex_cli")
     if not refresh and not is_stale(cache):
@@ -239,17 +227,36 @@ def list_models_codex_cli(refresh: bool = False) -> List[ModelDescriptor]:
     if not shutil.which("codex"):
         return []
 
-    models = [
-        ModelDescriptor(
+    discovered: List[ModelDescriptor] = []
+    try:
+        infos = discover_codex_cli_models_sync()
+        for mi in infos:
+            discovered.append(
+                ModelDescriptor(
+                    provider="codex_cli",
+                    model_id=mi.id,
+                    display_name=mi.display_name,
+                    capabilities={"generate": True},
+                    cost_tier="subscription",
+                )
+            )
+    except Exception:
+        discovered = []
+
+    # Optionally include a generic 'default' entry when not strict
+    if not strict:
+        default_entry = ModelDescriptor(
             provider="codex_cli",
             model_id="default",
-            display_name="Codex CLI default (select via 'codex /model')",
+            display_name="Codex CLI default (switch with 'codex /model')",
             capabilities={"generate": True},
             cost_tier="subscription",
         )
-    ]
-    cache_write("codex_cli", {"models": [vars(m) for m in models]})
-    return models
+        if not any(m.model_id == "default" for m in discovered):
+            discovered = [default_entry] + discovered
+
+    cache_write("codex_cli", {"models": [vars(m) for m in discovered]})
+    return discovered
 
 
 def list_models_gemini_cli(refresh: bool = False) -> List[ModelDescriptor]:

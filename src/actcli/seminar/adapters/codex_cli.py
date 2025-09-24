@@ -60,13 +60,23 @@ class CodexCLIAdapter:
         if system:
             full_prompt = f"System: {system}\n\nUser: {full_prompt}"
 
-        # Decide model and reasoning phrase
+        # Decide model and reasoning phrase (support ids like gpt-5-minimal)
         model = self.model
         reasoning_phrase = None
+        # Allow explicit reasoning param to override model-derived level
+        level_from_model = None
+        if model and model.lower().startswith("gpt-5-"):
+            tail = model.split("-", 2)[-1].lower()
+            if tail in ("minimal", "low", "medium", "high"):
+                level_from_model = tail
         if reasoning and model.startswith("gpt-5"):
             r = reasoning.strip().lower()
             if r in ("minimal", "low", "medium", "high"):
                 reasoning_phrase = f"gpt-5 {r}"
+        elif level_from_model:
+            reasoning_phrase = f"gpt-5 {level_from_model}"
+            # use base model for flag attempts; selection will be done via pre-switch
+            model = "gpt-5"
 
         # Build environment with optional tool/MCP disable
         env = os.environ.copy()
