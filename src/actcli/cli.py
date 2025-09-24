@@ -253,37 +253,74 @@ def presenter(
 
 @app.command()
 def server(
-    action: str = typer.Argument("start", help="start|status|stop|logs"),
+    action: str = typer.Argument("start", help="start|status|stop|logs|restart"),
     host: str = typer.Option("127.0.0.1", "--host"),
     port: int = typer.Option(7530, "--port"),
     reload: bool = typer.Option(True, "--reload/--no-reload"),
     with_ui: bool = typer.Option(True, "--with-ui/--no-ui"),
     tail: bool = typer.Option(False, "--tail", help="Tail logs (for logs action)"),
+    force: bool = typer.Option(False, "--force", help="On start: stop any prior pid and clean stale pid file"),
 ) -> None:
     """Control the Semhost server (FastAPI)."""
     from .commands.server import server_start, server_status, server_stop, server_logs
 
     if action == "start":
-        server_start(host=host, port=port, reload=reload, with_ui=with_ui)
+        server_start(host=host, port=port, reload=reload, with_ui=with_ui, force=force)
     elif action == "status":
         server_status(host=host, port=port)
     elif action == "stop":
         server_stop()
     elif action == "logs":
         server_logs(tail=tail)
+    elif action == "restart":
+        server_stop()
+        server_start(host=host, port=port, reload=reload, with_ui=with_ui, force=True)
     else:
-        raise SystemExit("Unknown action. Use: start|status|stop|logs")
+        raise SystemExit("Unknown action. Use: start|status|stop|logs|restart")
 
 
 @app.command()
-def spa(action: str = typer.Argument("dev", help="dev|build|preview")) -> None:
-    """Manage the SPA (dev server/build)."""
-    import shutil, subprocess
+def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> None:
+    """Manage the SPA (dev server/build). Single, predictable port (5173)."""
+    import shutil, subprocess, os, signal, time
+    from pathlib import Path as _P
+
+    OUT = _P("out"); OUT.mkdir(parents=True, exist_ok=True)
+    PID = OUT / "spa.pid"
+    LOG = OUT / "spa.log"
+
+    def _stop() -> None:
+        if not PID.exists():
+            console.print("SPA: no pid file; nothing to stop.")
+            return
+        pid_s = PID.read_text().strip()
+        try:
+            pid = int(pid_s)
+        except Exception:
+            console.print(f"SPA: invalid pid in {PID}: {pid_s}")
+            PID.unlink(missing_ok=True)
+            return
+        try:
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.3)
+        except Exception as e:
+            console.print(f"SPA: failed to stop pid={pid}: {e}")
+        PID.unlink(missing_ok=True)
+        console.print("SPA: stopped.")
+
+    if action == "stop":
+        _stop(); return
+
     if action == "dev":
         if not shutil.which("npm"):
             raise SystemExit("npm not found; install Node.js to run SPA dev server")
-        subprocess.Popen(["npm", "run", "dev", "--prefix", "studio"])  # non-blocking
-        console.print("SPA dev server starting at http://127.0.0.1:5173 (default)")
+        # Stop any previous dev server to avoid port guessing
+        if PID.exists():
+            _stop()
+        with LOG.open("ab", buffering=0) as log:
+            p = subprocess.Popen(["npm", "run", "dev", "--prefix", "studio"], stdout=log, stderr=log)
+        PID.write_text(str(p.pid), encoding="utf-8")
+        console.print("SPA dev server starting at http://127.0.0.1:5173 (logs: out/spa.log)")
     elif action == "build":
         if not shutil.which("npm"):
             raise SystemExit("npm not found; install Node.js to build SPA")
@@ -292,10 +329,15 @@ def spa(action: str = typer.Argument("dev", help="dev|build|preview")) -> None:
     elif action == "preview":
         if not shutil.which("npm"):
             raise SystemExit("npm not found; install Node.js to preview SPA")
-        subprocess.Popen(["npm", "run", "preview", "--prefix", "studio"])  # non-blocking
-        console.print("SPA preview server starting (defaults to 5173)")
+        # Stop any previous preview/dev server
+        if PID.exists():
+            _stop()
+        with LOG.open("ab", buffering=0) as log:
+            p = subprocess.Popen(["npm", "run", "preview", "--prefix", "studio"], stdout=log, stderr=log)
+        PID.write_text(str(p.pid), encoding="utf-8")
+        console.print("SPA preview server starting (defaults to 5173). Logs: out/spa.log")
     else:
-        raise SystemExit("Unknown action. Use: dev|build|preview")
+        raise SystemExit("Unknown action. Use: dev|build|preview|stop")
 
 
 @app.command()

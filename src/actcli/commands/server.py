@@ -15,11 +15,59 @@ PID_FILE = OUT / "semhost.pid"
 LOG_FILE = OUT / "semhost.log"
 
 
-def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True, with_ui: bool = True) -> None:
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but not ours – treat as alive
+        return True
+
+
+def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True, with_ui: bool = True, *, force: bool = False) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     if PID_FILE.exists():
-        print(f"Server appears running (pid file exists at {PID_FILE}). Try `actcli server status` or `actcli server stop`.\n")
-        return
+        # Validate PID file; clean up stale, or stop active if --force
+        try:
+            pid = int(PID_FILE.read_text().strip())
+        except Exception:
+            pid = -1
+        if pid > 0 and _pid_alive(pid):
+            if force:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    time.sleep(0.4)
+                except Exception:
+                    pass
+                if _pid_alive(pid):
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        time.sleep(0.2)
+                    except Exception:
+                        pass
+                try:
+                    PID_FILE.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            else:
+                print(f"Server appears running (pid={pid}). Use `actcli server stop` or `actcli server start --force`.\n")
+                return
+        else:
+            # Stale pid file
+            PID_FILE.unlink(missing_ok=True)
+
+    # Refuse to start if some other process is already serving on the port
+    url = f"http://{host}:{port}/health"
+    try:
+        with httpx.Client(timeout=1.5) as client:
+            r = client.get(url)
+            if r.status_code == 200:
+                print(f"A server is already responding at {url}. If this is an orphaned instance, stop it and retry.")
+                return
+    except Exception:
+        pass
     cmd = [
         "uvicorn",
         "semhost.main:create_app",
@@ -56,9 +104,52 @@ def server_status(host: str = "127.0.0.1", port: int = 7530) -> None:
         print("Semhost not running (no pid file and /health failed)")
 
 
-def server_stop() -> None:
+def _kill_by_port(port: int) -> bool:
+    """Best-effort: find and kill processes listening on TCP port.
+
+    Uses lsof or fuser if available. Returns True if at least one pid was signaled.
+    """
+    import shutil, subprocess
+    killed = False
+    try:
+        if shutil.which("lsof"):
+            p = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=2)
+            pids = [int(x) for x in (p.stdout or "").split() if x.strip().isdigit()]
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    time.sleep(0.2)
+                    if _pid_alive(pid):
+                        os.kill(pid, signal.SIGKILL)
+                except Exception:
+                    pass
+                killed = True
+            return killed
+        if shutil.which("fuser"):
+            # fuser -k sends SIGKILL by default on some systems; be explicit with -TERM first
+            subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True, text=True, timeout=2)
+            return True
+    except Exception:
+        pass
+    return killed
+
+
+def server_stop(host: str = "127.0.0.1", port: int = 7530, *, force_port: bool = False) -> None:
     if not PID_FILE.exists():
         print("No pid file; server may not be running.")
+        # If /health responds and --force-port, attempt port kill
+        if force_port:
+            try:
+                with httpx.Client(timeout=1.5) as client:
+                    r = client.get(f"http://{host}:{port}/health")
+                    if r.status_code == 200:
+                        if _kill_by_port(port):
+                            print(f"Killed process bound to :{port}.")
+                        else:
+                            print(f"Could not identify process for :{port}.")
+                        return
+            except Exception:
+                pass
         return
     pid_s = PID_FILE.read_text().strip()
     try:
@@ -71,10 +162,21 @@ def server_stop() -> None:
         time.sleep(0.5)
     except Exception as e:
         print(f"Failed to stop pid={pid}: {e}")
+    # Remove pid file regardless (best-effort cleanup)
     try:
         PID_FILE.unlink(missing_ok=True)
     except Exception:
         pass
+    # If something is still serving at the port, optionally kill by port
+    if force_port:
+        try:
+            with httpx.Client(timeout=1.5) as client:
+                r = client.get(f"http://{host}:{port}/health")
+                if r.status_code == 200:
+                    if _kill_by_port(port):
+                        print(f"Killed process bound to :{port}.")
+        except Exception:
+            pass
     print("Semhost stopped.")
 
 
@@ -97,4 +199,3 @@ def server_logs(tail: bool = False) -> None:
             return
     else:
         print(LOG_FILE.read_text(encoding="utf-8", errors="ignore"))
-

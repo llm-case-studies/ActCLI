@@ -19,6 +19,8 @@ from .routers import pricing as pricing_router
 from .routers import conversations as conversations_router
 from .routers import chat as chat_router
 from .routers import history as history_router
+from .routers import admin as admin_router
+from .routers import discovery as discovery_router
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
@@ -54,6 +56,8 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(conversations_router.router)
     app.include_router(chat_router.router)
     app.include_router(history_router.router)
+    app.include_router(admin_router.router)
+    app.include_router(discovery_router.router)
 
     # Serve built SPA (if present) at /ui
     try:
