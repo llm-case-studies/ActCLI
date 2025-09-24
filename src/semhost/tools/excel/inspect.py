@@ -31,6 +31,10 @@ try:
     from oletools.olevba import VBA_Parser  # type: ignore
 except Exception:  # pragma: no cover - optional
     VBA_Parser = None  # type: ignore
+try:
+    import msoffcrypto  # type: ignore
+except Exception:  # pragma: no cover - optional
+    msoffcrypto = None  # type: ignore
 
 from ...mcp.runtime import JOB_MANAGER
 from ...deps import get_status
@@ -130,10 +134,28 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                         yield {"event": "fault", "job": job_id, "ok": False, "error": "zip too large (>500MB)"}
                         return
                 # Encrypted OOXML package (basic detection)
-                if 'EncryptionInfo' in names and not password:
-                    yield {"event": "fault", "job": job_id, "ok": False, "error": "PASSWORD_REQUIRED"}
-                    return
+                if 'EncryptionInfo' in names:
+                    if not password:
+                        yield {"event": "fault", "job": job_id, "ok": False, "error": "PASSWORD_REQUIRED"}
+                        return
+                    if msoffcrypto is None:
+                        yield {"event": "fault", "job": job_id, "ok": False, "error": "PASSWORD_PROVIDED_BUT_MSOFFCRYPTO_MISSING"}
+                        return
+                    dec_path = (out_root / 'decrypted.xlsx').resolve()
+                    try:
+                        with open(src, 'rb') as fsrc:
+                            of = msoffcrypto.OfficeFile(fsrc)  # type: ignore
+                            of.load_key(password=password)
+                            with open(dec_path, 'wb') as fdst:
+                                of.decrypt(fdst)
+                        src = Path(dec_path)
+                    except Exception:
+                        yield {"event": "fault", "job": job_id, "ok": False, "error": "PASSWORD_INVALID"}
+                        return
 
+            # Re-open (possibly decrypted) and enumerate parts
+            with zipfile.ZipFile(src, 'r') as z2:
+                names = z2.namelist()
                 yield {"event": "progress", "job": job_id, "pct": 30, "msg": "Enumerating sheets & parts"}
                 ws_count = sum(1 for n in names if n.startswith('xl/worksheets/sheet') and n.endswith('.xml'))
                 connections_present = 'xl/connections.xml' in names
@@ -145,12 +167,12 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                 for p in ['[Content_Types].xml', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/connections.xml']:
                     if p in names:
                         try:
-                            z.extract(p, parts_dir)
+                            z2.extract(p, parts_dir)
                         except Exception:
                             pass
                 for n in external_links[:5]:  # limit for MVP
                     try:
-                        z.extract(n, parts_dir)
+                        z2.extract(n, parts_dir)
                     except Exception:
                         pass
 
@@ -163,7 +185,7 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                             try:
                                 outp = vba_dir / n
                                 outp.parent.mkdir(parents=True, exist_ok=True)
-                                z.extract(n, vba_dir)
+                                z2.extract(n, vba_dir)
                                 try:
                                     os.chmod((vba_dir / n).resolve(), 0o640)
                                 except Exception:
@@ -172,7 +194,17 @@ def stream(job_id: str, params: Dict[str, Any]) -> Generator[Dict[str, Any], Non
                             except Exception:
                                 pass
                 if suffix == '.xlsb':
-                    notes.append('xlsb formulas limited; values only via pyxlsb in future')
+                    # Optional: count sheets via pyxlsb (non-fatal if missing)
+                    try:
+                        from pyxlsb import open_workbook as xlsb_open  # type: ignore
+                        with xlsb_open(str(src)) as wb2:  # pragma: no cover - optional
+                            try:
+                                ws_count = len(list(wb2.sheets))  # type: ignore[attr-defined]
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    notes.append('xlsb formulas limited; values only via pyxlsb')
         except zipfile.BadZipFile:
             yield {"event": "fault", "job": job_id, "ok": False, "error": "invalid zip container"}
             return

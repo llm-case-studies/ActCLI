@@ -22,6 +22,7 @@ from .routers import history as history_router
 from .routers import mcp_runtime as mcp_runtime_router
 from .routers import admin as admin_router
 from .routers import discovery as discovery_router
+from .routers import fs as fs_router
 from .routers import mcp_transport as mcp_transport_router
 
 
@@ -62,6 +63,7 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
     app.include_router(discovery_router.router)
     app.include_router(mcp_runtime_router.router)
     app.include_router(mcp_transport_router.router)
+    app.include_router(fs_router.router)
 
     # Serve built SPA (if present) at /ui
     try:
