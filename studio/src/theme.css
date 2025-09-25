@@ -81,3 +81,87 @@
 .history { display: grid; gap: 6px }
 .history-row { display: grid; grid-template-columns: 28px 68px 1fr 40px 1fr; gap: 8px; align-items: center }
 .link { background: transparent; border: none; color: #4ea6ff; cursor: pointer; text-align: left }
+
+/* Excel Inspect Page Styles */
+.excel-inspect-page { padding: 20px; max-width: 1400px; margin: 0 auto; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { margin: 0 0 8px 0; font-size: 24px; }
+.page-header p { margin: 0; color: var(--vscode-editor-foreground); opacity: 0.8; }
+
+.page-content { display: grid; grid-template-columns: 400px 1fr; gap: 24px; min-height: 600px; }
+.left-panel { display: grid; gap: 20px; align-content: start; }
+.right-panel { display: grid; grid-template-rows: 1fr; }
+
+/* File Selector */
+.file-selector h3 { margin: 0 0 12px 0; }
+.file-input-group { display: flex; gap: 8px; margin-bottom: 12px; }
+.file-path-input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+.file-input-group button { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--vscode-button-background); color: var(--vscode-editor-foreground); cursor: pointer; }
+
+.file-list { border: 1px solid var(--border); border-radius: 4px; max-height: 200px; overflow-y: auto; }
+.file-list-header { padding: 8px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; }
+.file-entries { }
+.file-entry { display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.file-entry:hover { background: var(--vscode-badge-background); }
+.file-entry.selected { background: var(--vscode-badge-background); }
+.file-entry:last-child { border-bottom: none; }
+.file-icon { font-size: 14px; }
+.file-name { flex: 1; }
+.file-size { font-size: 12px; opacity: 0.7; }
+
+/* Advanced Options */
+.advanced-options h3 { margin: 0 0 12px 0; }
+.option-group { margin-bottom: 12px; }
+.option-group label { display: block; font-size: 14px; margin-bottom: 4px; }
+.option-group input[type="text"], .option-group input[type="password"], .option-group input[type="number"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+.option-group input[type="checkbox"] { margin-right: 8px; }
+
+/* Action Section */
+.action-section { display: grid; gap: 12px; }
+.inspect-btn { padding: 12px 24px; border: 1px solid var(--border); border-radius: 6px; background: var(--vscode-badge-background); color: white; font-weight: 600; cursor: pointer; font-size: 14px; }
+.inspect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.error-message { color: #f85149; padding: 8px; border: 1px solid #f85149; border-radius: 4px; background: rgba(248, 81, 73, 0.1); }
+
+/* Job Status */
+.job-status h3 { margin: 0 0 12px 0; }
+.job-id { font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 6px; background: var(--vscode-sideBar-background); border-radius: 4px; }
+.status-details { display: grid; gap: 8px; margin-bottom: 12px; }
+.status-row { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: center; }
+.status-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.status-badge.success { background: #238636; color: white; }
+.status-badge.error { background: #da3633; color: white; }
+.status-badge.running { background: #fd8c73; color: white; }
+.status-row.error span:last-child { color: #f85149; }
+.cancel-btn { padding: 8px 16px; border: 1px solid #da3633; border-radius: 4px; background: transparent; color: #da3633; cursor: pointer; }
+
+/* Artifacts Section */
+.artifacts-section { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 100%; }
+.artifacts-tree-container, .report-viewer-container { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+
+/* Artifacts Tree */
+.artifacts-tree { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+.tree-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--border); font-weight: 600; }
+.tree-header button { background: transparent; border: none; cursor: pointer; font-size: 14px; }
+.tree-content { overflow-y: auto; }
+.tree-entry { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.tree-entry:hover { background: var(--vscode-badge-background); }
+.tree-entry.selected { background: var(--vscode-badge-background); }
+.tree-entry:last-child { border-bottom: none; }
+.entry-icon { font-size: 14px; }
+.entry-name { flex: 1; }
+.entry-size { font-size: 12px; opacity: 0.7; margin-left: auto; }
+.tree-loading, .tree-error, .tree-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 8px; color: var(--vscode-editor-foreground); opacity: 0.7; }
+.tree-loading-indicator { display: flex; justify-content: center; padding: 8px; }
+
+/* Report Viewer */
+.report-viewer { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+.report-viewer-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--border); }
+.file-path { font-family: monospace; font-size: 12px; }
+.actions { display: flex; gap: 8px; }
+.actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; }
+.report-viewer-content { overflow: auto; padding: 12px; }
+.report-viewer-content pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 12px; line-height: 1.4; }
+.report-viewer-empty, .report-viewer-loading, .report-viewer-error { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px; color: var(--vscode-editor-foreground); opacity: 0.7; }
+.empty-state, .loading-state, .error-state { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.empty-state span, .loading-state span, .error-state span { font-size: 24px; }
+.error-state pre { font-size: 12px; background: rgba(248, 81, 73, 0.1); padding: 8px; border-radius: 4px; }

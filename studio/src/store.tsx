@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
-type Page = 'seminar' | 'models' | 'providers' | 'status' | 'locations'
+type Page = 'seminar' | 'models' | 'providers' | 'status' | 'locations' | 'excel-inspect'
 type PanelTab = 'events' | 'requests' | 'ws' | 'console'
 
 type RequestLog = { method: string, url: string, status: number, ms: number }

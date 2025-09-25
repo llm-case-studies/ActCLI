@@ -4,10 +4,11 @@ import { ProvidersPage } from './pages/Providers'
 import { SeminarPage } from './pages/Seminar'
 import { StatusPage } from './pages/Status'
 import { LocationsPage } from './pages/Locations'
+import { ExcelInspectPage } from './pages/Tools_ExcelInspect'
 import { StudioProvider, useStudio } from './store'
 import './theme.css'
 
-type Page = 'seminar' | 'models' | 'providers' | 'status' | 'locations'
+type Page = 'seminar' | 'models' | 'providers' | 'status' | 'locations' | 'excel-inspect'
 
 export default function App() {
   return (
@@ -91,6 +92,7 @@ function VSCodeShell() {
           {s.activePage==='providers' && <ProvidersPage server={s.server} />}
           {s.activePage==='status' && <StatusPage server={s.server} />}
           {s.activePage==='locations' && <LocationsPage server={s.server} />}
+          {s.activePage==='excel-inspect' && <ExcelInspectPage server={s.server} />}
         </div>
         {/* Panel */}
         <div className="panel-resizer" onMouseDown={()=>setResizing('panel')} />
@@ -213,8 +215,9 @@ const ACTIVITIES = [
   { id:'providers', label:'Providers', icon:'🔌' },
   { id:'status', label:'Status', icon:'📶' },
   { id:'locations', label:'Locations', icon:'📁' },
+  { id:'excel-inspect', label:'Excel Inspector', icon:'📊' },
 ] as const
 
 const LABELS: Record<Page,string> = {
-  seminar: 'Seminar', models: 'Models', providers: 'Providers', status: 'Status', locations: 'Locations'
+  seminar: 'Seminar', models: 'Models', providers: 'Providers', status: 'Status', locations: 'Locations', 'excel-inspect': 'Excel Inspector'
 }
