@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ActCLI Web Bridge</title>
+    <style>
+      body { font: 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 10px; width: 280px; color: #0f172a; }
+      header { font-weight: 600; margin-bottom: 8px; color: #0891b2; }
+      button { padding: 6px 10px; margin: 4px 4px 4px 0; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; cursor: pointer; }
+      button.primary { background: #06b6d4; color: #fff; border-color: #0891b2; }
+      .row { margin: 6px 0; }
+      .small { color: #475569; font-size: 12px; }
+      #status { margin-top: 8px; color: #334155; }
+      code { background: #e2e8f0; padding: 1px 3px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <header>ActCLI Web Chat Bridge</header>
+    <div class="row">
+      <button id="pick" class="primary">Pick Elements</button>
+      <button id="validate">Validate</button>
+    </div>
+    <div class="row">
+      <button id="connect">Connect</button>
+      <button id="disconnect">Disconnect</button>
+    </div>
+    <div id="status" class="small">Idle</div>
+    <script>
+      function originKeyFromUrl(url) { try { return new URL(url).origin; } catch { return null; } }
+      async function getActiveTab() { const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); return tab; }
+      function setStatus(text) { document.getElementById('status').textContent = text; }
+      document.getElementById('pick').addEventListener('click', async () => {
+        setStatus('Picking: click Input → Send → History');
+        await chrome.runtime.sendMessage({ type: 'bridge.pickStart' });
+      });
+      document.getElementById('validate').addEventListener('click', async () => {
+        setStatus('Validating…');
+        const r = await chrome.runtime.sendMessage({ type: 'bridge.validate', text: 'Hello from ActCLI' });
+        if (r?.ok) setStatus('Validate: OK' + (r.observed ? ' (observed history append)' : ''));
+        else setStatus('Validate failed: ' + (r?.error || 'unknown'));
+      });
+      document.getElementById('connect').addEventListener('click', async () => {
+        setStatus('Connecting…');
+        const r = await chrome.runtime.sendMessage({ type: 'bridge.connect' });
+        if (r?.ok) setStatus('Connected for origin: ' + (r.origin || '(unknown)'));
+        else setStatus('Connect failed');
+      });
+      document.getElementById('disconnect').addEventListener('click', async () => {
+        const tab = await getActiveTab();
+        const origin = tab?.url ? originKeyFromUrl(tab.url) : null;
+        if (origin) await chrome.runtime.sendMessage({ type: 'bridge.deleteProfile', origin });
+        setStatus('Disconnected (profile cleared)');
+      });
+    </script>
+  </body>
+  </html>
+

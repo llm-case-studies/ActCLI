@@ -1,0 +1,43 @@
+# ActCLI Code Owners - PROPOSAL/EXAMPLE
+# Each line is a file pattern followed by one or more owners.
+# Order matters; the last matching pattern takes precedence.
+# NOTE: This is a template for future implementation when GitHub team structure is established.
+
+# Global fallback
+* @alex
+
+# Backend & Infrastructure
+/src/semhost/ @alex
+/docker/ @alex
+/pyproject.toml @alex
+
+# Refactoring Owner - Foundation & Technical Debt
+/src/semhost/schemas/ @Codex-Refactoring @Claude-Refactoring
+/src/semhost/exceptions/ @Codex-Refactoring @Claude-Refactoring
+/src/semhost/jobs/ @Codex-Refactoring @Claude-Refactoring
+/src/semhost/config/ @Codex-Refactoring @Claude-Refactoring
+/src/semhost/logging/ @Codex-Refactoring @Claude-Refactoring
+/tests/integration/ @Codex-Refactoring @Claude-Refactoring
+
+# MCP Runtime & Transport
+/src/semhost/mcp/ @alex
+/src/semhost/routers/mcp*.py @alex
+
+# Excel Inspection Tools
+/src/semhost/tools/excel/ @alex
+
+# CLI & Terminal UI
+/src/actcli/ @alex
+
+# Studio SPA
+/studio/src/ @alex
+
+# Seminar Orchestration
+/src/actcli/seminar/ @alex
+/src/semhost/routers/sessions.py @alex
+
+# Documentation
+/docs/Owners/Refactoring/ @Codex-Refactoring @Claude-Refactoring
+/docs/RESPONSIBILITY_AREAS_OWNERSHIP_MODEL.md @alex
+/CLAUDE.md @alex
+/README.md @alex
