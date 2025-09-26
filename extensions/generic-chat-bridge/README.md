@@ -23,8 +23,9 @@ Playground
 - Start a static server or open the files directly:
   - `playground/textarea.html`
   - `playground/contenteditable.html`
+  - `playground/virtualized.html`
+  - `playground/iframe.html`
 
 Notes
 - This is plain JS/HTML; no bundler required. Keep permissions minimal.
 - The code intentionally avoids background automation and respects human-paced usage.
-

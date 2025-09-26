@@ -61,6 +61,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
       return;
     }
+    if (msg?.type === 'content.health') {
+      const origin = getOrigin();
+      const res = await postBackground({ type: 'bridge.getProfile', origin });
+      const prof = res?.profile;
+      if (!prof) { sendResponse({ ok: false, error: 'no-profile' }); return; }
+      const inputEl = selectEl(prof.input);
+      const sendEl = selectEl(prof.send);
+      const histEl = selectEl(prof.history);
+      const ok = !!(inputEl && sendEl && histEl);
+      sendResponse({ ok });
+      return;
+    }
     if (msg?.type === 'content.validate') {
       const { text } = msg;
       const origin = getOrigin();

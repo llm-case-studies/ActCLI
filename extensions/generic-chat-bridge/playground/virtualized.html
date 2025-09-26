@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground: Virtualized History</title>
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; }
+      .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+      .ce { min-height: 80px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
+      button { padding: 6px 12px; }
+      #viewport { height: 240px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 12px; }
+      #history { position: relative; }
+      .msg { padding: 6px 8px; background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; margin: 6px; }
+      .placeholder { height: 24px; margin: 6px; background: #e2e8f0; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h3>Playground: Virtualized History</h3>
+    <div class="row">
+      <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message"></div>
+      <button id="send">Send</button>
+    </div>
+    <div id="viewport" aria-label="viewport">
+      <div id="history" aria-label="history" role="list"></div>
+    </div>
+    <script>
+      const composer = document.getElementById('composer');
+      const send = document.getElementById('send');
+      const viewport = document.getElementById('viewport');
+      const history = document.getElementById('history');
+
+      let items = []; // { id, text }
+      let nextId = 1;
+
+      function addItem(text) {
+        items.push({ id: nextId++, text });
+        render();
+      }
+
+      function visibleRange() {
+        const top = viewport.scrollTop;
+        const bottom = top + viewport.clientHeight;
+        const approxIndexTop = Math.floor(top / 36);
+        const approxIndexBottom = Math.ceil(bottom / 36);
+        const start = Math.max(0, approxIndexTop - 5);
+        const end = Math.min(items.length, approxIndexBottom + 5);
+        return { start, end };
+      }
+
+      function render() {
+        history.innerHTML = '';
+        const { start, end } = visibleRange();
+        // pre placeholder
+        if (start > 0) {
+          const pre = document.createElement('div');
+          pre.className = 'placeholder';
+          pre.style.height = (start * 36) + 'px';
+          history.appendChild(pre);
+        }
+        for (let i = start; i < end; i++) {
+          const it = items[i];
+          const div = document.createElement('div');
+          div.className = 'msg';
+          div.textContent = it.text;
+          history.appendChild(div);
+        }
+        if (end < items.length) {
+          const post = document.createElement('div');
+          post.className = 'placeholder';
+          post.style.height = ((items.length - end) * 36) + 'px';
+          history.appendChild(post);
+        }
+      }
+
+      viewport.addEventListener('scroll', render);
+
+      send.addEventListener('click', () => {
+        const txt = composer.innerText.trim();
+        if (!txt) return;
+        addItem(txt);
+        composer.innerText = '';
+        // auto scroll down
+        setTimeout(() => { viewport.scrollTop = viewport.scrollHeight; }, 0);
+      });
+
+      // Seed some items to simulate large history
+      for (let i = 0; i < 50; i++) items.push({ id: nextId++, text: 'hello #' + i });
+      render();
+    </script>
+  </body>
+  </html>
+
