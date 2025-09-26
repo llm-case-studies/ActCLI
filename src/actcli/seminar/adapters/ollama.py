@@ -6,7 +6,6 @@ from typing import Optional
 import httpx
 
 
-
 class OllamaAdapter:
     """Adapter for local Ollama models.
 

@@ -6,7 +6,6 @@ from typing import Optional
 import httpx
 
 
-
 class AnthropicAdapter:
     def __init__(self, model: str = "claude-3-haiku-20240307") -> None:
         self.model = model
@@ -29,7 +28,9 @@ class AnthropicAdapter:
             except Exception:
                 pass
         if not self._api_key and not self._oauth_token:
-            raise RuntimeError("Anthropic auth missing (set ANTHROPIC_API_KEY or login with PKCE)")
+            raise RuntimeError(
+                "Anthropic auth missing (set ANTHROPIC_API_KEY or login with PKCE)"
+            )
 
     def generate(
         self,
@@ -51,7 +52,7 @@ class AnthropicAdapter:
             "model": self.model,
             "max_tokens": 1024,
             "messages": [
-                *( [ {"role": "system", "content": system} ] if system else [] ),
+                *([{"role": "system", "content": system}] if system else []),
                 {"role": "user", "content": msg_content},
             ],
         }
@@ -60,13 +61,18 @@ class AnthropicAdapter:
                 payload["temperature"] = float(temperature)
             except Exception:
                 pass
-        headers = {"anthropic-version": "2023-06-01", "content-type": "application/json"}
+        headers = {
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
         if self._api_key:
             headers["x-api-key"] = self._api_key
         elif self._oauth_token:
             headers["Authorization"] = f"Bearer {self._oauth_token}"
         with httpx.Client(timeout=timeout_s) as client:
-            r = client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
+            r = client.post(
+                "https://api.anthropic.com/v1/messages", headers=headers, json=payload
+            )
             r.raise_for_status()
             data = r.json()
             # New API returns content array

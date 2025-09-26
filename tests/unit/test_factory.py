@@ -13,7 +13,16 @@ class _DummyAdapter:
         self.model_version = "0"
         self.last = {}
 
-    def generate(self, prompt: str, *, system: str = "", seed: Optional[int] = None, timeout_s: int = 30, round_index: int = 1, context_snippets: Optional[str] = None) -> str:  # noqa: E501
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        seed: Optional[int] = None,
+        timeout_s: int = 30,
+        round_index: int = 1,
+        context_snippets: Optional[str] = None,
+    ) -> str:  # noqa: E501
         self.last = {
             "prompt": prompt,
             "system": system,
@@ -25,7 +34,9 @@ class _DummyAdapter:
 
 def test_bound_adapter_overrides_params() -> None:
     base = _DummyAdapter()
-    bound = BoundAdapter(base, alias="alias1", params=BoundParams(seed=7, system="sys", timeout_s=5))
+    bound = BoundAdapter(
+        base, alias="alias1", params=BoundParams(seed=7, system="sys", timeout_s=5)
+    )
     out = bound.generate("q", system="ignored", seed=1, timeout_s=30)
     assert out == "ok"
     assert base.last["seed"] == 7
@@ -40,4 +51,3 @@ def test_factory_builds_echo_when_cloud_blocked() -> None:
     # When cloud is blocked, should return EchoAdapter with cloud-blocked in base name
     assert hasattr(a, "_base") and hasattr(a._base, "name")
     assert "cloud-blocked" in a._base.name
-

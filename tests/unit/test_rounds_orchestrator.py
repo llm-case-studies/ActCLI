@@ -19,7 +19,17 @@ class SleepAdapter:
         self.model_version = "test"
         self._sleep_s = sleep_s
 
-    def generate(self, prompt: str, *, system: str = "", seed: int | None = None, temperature: float | None = None, timeout_s: int = 30, round_index: int = 1, context_snippets: str | None = None) -> str:  # noqa: E501
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        seed: int | None = None,
+        temperature: float | None = None,
+        timeout_s: int = 30,
+        round_index: int = 1,
+        context_snippets: str | None = None,
+    ) -> str:  # noqa: E501
         time.sleep(self._sleep_s)
         return "slow"
 
@@ -28,7 +38,9 @@ def chdir_tmp(tmp_path: Path) -> None:
     os.chdir(tmp_path)
 
 
-def test_barrier_with_timeout_and_two_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_barrier_with_timeout_and_two_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     chdir_tmp(tmp_path)
     orch = RoundOrchestrator(window_k=2, max_rounds=5)
     A = EchoAdapter(name="A")
@@ -65,7 +77,13 @@ def test_windowing_includes_only_last_k_rounds(tmp_path: Path) -> None:
 def test_params_snapshot_and_mood_application(tmp_path: Path) -> None:
     chdir_tmp(tmp_path)
     # Build a participant with pre-bound params
-    spec = ParticipantSpec(alias="E1", provider="echo", model_id="echo", host=None, params={"temperature": 0.7, "system": "Hello"})
+    spec = ParticipantSpec(
+        alias="E1",
+        provider="echo",
+        model_id="echo",
+        host=None,
+        params={"temperature": 0.7, "system": "Hello"},
+    )
     a = AdapterFactory.from_spec(spec, allow_cloud=True)
     orch = RoundOrchestrator(window_k=0)
     orch.set_participants({"E1": a})
@@ -89,4 +107,3 @@ def test_persistence_creates_session_files(tmp_path: Path) -> None:
     root = Path("out") / "sessions" / orch.state.id
     assert (root / "session.json").exists()
     assert (root / f"round-{rr.index}.json").exists()
-

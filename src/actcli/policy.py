@@ -11,8 +11,12 @@ from .config import load_config
 
 @dataclass
 class Policy:
-    read: List[str] = field(default_factory=lambda: ["./**"])  # globs relative to project root
-    write: List[str] = field(default_factory=lambda: ["./out/**"])  # globs relative to project root
+    read: List[str] = field(
+        default_factory=lambda: ["./**"]
+    )  # globs relative to project root
+    write: List[str] = field(
+        default_factory=lambda: ["./out/**"]
+    )  # globs relative to project root
     cloud_share: bool = False
 
     def allow_read(self, glob: str) -> None:
@@ -51,4 +55,3 @@ def merge_policy() -> Policy:
         p.write = trust.write[:]
         p.cloud_share = trust.cloud_share
     return p
-

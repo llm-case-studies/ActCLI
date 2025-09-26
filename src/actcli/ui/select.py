@@ -12,7 +12,9 @@ from rich.table import Table
 console = Console()
 
 
-def _normalize(options: Sequence[Tuple[str, str]] | Sequence[str]) -> List[Tuple[str, str]]:
+def _normalize(
+    options: Sequence[Tuple[str, str]] | Sequence[str],
+) -> List[Tuple[str, str]]:
     norm: List[Tuple[str, str]] = []
     if not options:
         return norm
@@ -23,7 +25,12 @@ def _normalize(options: Sequence[Tuple[str, str]] | Sequence[str]) -> List[Tuple
     return norm
 
 
-def select_one(options: Sequence[Tuple[str, str]] | Sequence[str], *, title: str = "Select", help_text: str = "↑/↓ to navigate • Enter to select • Esc to cancel") -> Optional[str]:
+def select_one(
+    options: Sequence[Tuple[str, str]] | Sequence[str],
+    *,
+    title: str = "Select",
+    help_text: str = "↑/↓ to navigate • Enter to select • Esc to cancel",
+) -> Optional[str]:
     items = _normalize(options)
     if not items:
         return None
@@ -41,7 +48,9 @@ def select_one(options: Sequence[Tuple[str, str]] | Sequence[str], *, title: str
         table.add_row("", f"[dim]{help_text}[/dim]")
         return Panel(table, title=title, border_style="cyan", padding=(0, 1))
 
-    with Live(_render(), console=console, transient=True, refresh_per_second=30) as live:
+    with Live(
+        _render(), console=console, transient=True, refresh_per_second=30
+    ) as live:
         while True:
             key = readchar.readkey()
             if key in (readchar.key.CTRL_C, readchar.key.ESC):
@@ -58,4 +67,3 @@ def select_one(options: Sequence[Tuple[str, str]] | Sequence[str], *, title: str
                 return items[idx][0]
 
     return None
-

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import subprocess
 
-import pytest
 
 from actcli.seminar.adapters.codex_cli import CodexCLIAdapter
 
@@ -37,4 +36,3 @@ def test_codex_cli_parsing_filters_echo(monkeypatch):
     out = adapter.generate("Q", timeout_s=5)
     assert "answer" in out.lower()
     assert out.strip() != "Q"
-

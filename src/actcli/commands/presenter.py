@@ -91,7 +91,13 @@ def start_presenter(port: int = 8765, open_browser: bool = True) -> None:
     handler = http.server.SimpleHTTPRequestHandler
     with socketserver.TCPServer(("127.0.0.1", port), handler) as httpd:
         url = f"http://127.0.0.1:{port}/"
-        console.print(Panel(f"Presenter serving {root}\nURL: {url}", title="Presenter", border_style="cyan"))
+        console.print(
+            Panel(
+                f"Presenter serving {root}\nURL: {url}",
+                title="Presenter",
+                border_style="cyan",
+            )
+        )
         if open_browser:
             try:
                 webbrowser.open(url)
@@ -101,4 +107,3 @@ def start_presenter(port: int = 8765, open_browser: bool = True) -> None:
             httpd.serve_forever()
         except KeyboardInterrupt:
             console.print("Stopping presenter…")
-

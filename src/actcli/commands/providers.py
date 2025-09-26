@@ -18,7 +18,9 @@ def _which(cmd: str) -> Optional[str]:
 
 def _version(cmd: str) -> str:
     try:
-        p = subprocess.run([cmd, "--version"], capture_output=True, text=True, timeout=5)
+        p = subprocess.run(
+            [cmd, "--version"], capture_output=True, text=True, timeout=5
+        )
         out = (p.stdout or p.stderr or "").strip()
         return out or "-"
     except Exception:
@@ -29,7 +31,9 @@ def _auth_probe_codex() -> Tuple[str, str]:
     if not _which("codex"):
         return ("missing", "Install with: npm i -g @openai/codex")
     try:
-        p = subprocess.run(["codex", "exec", "ping"], capture_output=True, text=True, timeout=8)
+        p = subprocess.run(
+            ["codex", "exec", "ping"], capture_output=True, text=True, timeout=8
+        )
         if p.returncode == 0:
             return ("ok", "signed in")
         return ("no", (p.stderr or p.stdout or "not signed in").strip()[:120])
@@ -43,7 +47,12 @@ def _auth_probe_claude() -> Tuple[str, str]:
     if not _which("claude"):
         return ("missing", "Install with: npm i -g @anthropic-ai/claude-code")
     try:
-        p = subprocess.run(["claude", "-p", "test", "--output-format", "json"], capture_output=True, text=True, timeout=8)
+        p = subprocess.run(
+            ["claude", "-p", "test", "--output-format", "json"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
         if p.returncode == 0:
             return ("ok", "signed in")
         return ("no", (p.stderr or p.stdout or "not signed in").strip()[:120])
@@ -75,5 +84,6 @@ def providers_doctor() -> None:
     table.add_row("claude_cli", claude_bin, claude_ver, claude_auth, claude_hint)
 
     console.print(Panel(table, border_style="cyan"))
-    console.print("Launch login: 'actcli auth login codex_cli' or 'actcli auth login claude_cli'")
-
+    console.print(
+        "Launch login: 'actcli auth login codex_cli' or 'actcli auth login claude_cli'"
+    )

@@ -27,7 +27,7 @@ def test_providers_doctor_ok(monkeypatch, capsys):
         if args[:2] == ["codex", "exec"]:
             return _P(stdout="done")
         if args[:2] == ["claude", "-p"]:
-            return _P(stdout="{\"text\": \"ok\"}")
+            return _P(stdout='{"text": "ok"}')
         if args[-1] == "--version":
             return _P(stdout=f"{args[0]} v0")
         return _P()
@@ -37,4 +37,3 @@ def test_providers_doctor_ok(monkeypatch, capsys):
     providers_doctor()
     out = capsys.readouterr().out
     assert "ok" in out
-

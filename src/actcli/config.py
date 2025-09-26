@@ -67,17 +67,16 @@ def load_config(cwd: Optional[Path] = None) -> tuple[Config, Optional[Path]]:
 def write_project_config(path: Path, cfg: Config) -> None:
     lines = [
         "[project]",
-        f"name = \"{cfg.project_name or Path.cwd().name}\"",
-        f"version = \"{cfg.project_version or '0.1'}\"",
+        f'name = "{cfg.project_name or Path.cwd().name}"',
+        f'version = "{cfg.project_version or "0.1"}"',
         "",
         "[defaults]",
-        f"mode = \"{cfg.defaults.mode}\"",
-        f"audit_level = \"{cfg.defaults.audit_level}\"",
+        f'mode = "{cfg.defaults.mode}"',
+        f'audit_level = "{cfg.defaults.audit_level}"',
         f"seed = {cfg.defaults.seed}",
-        f"output_dir = \"{cfg.defaults.output_dir}\"",
-        f"models = \"{cfg.defaults.models}\"",
+        f'output_dir = "{cfg.defaults.output_dir}"',
+        f'models = "{cfg.defaults.models}"',
     ]
     if cfg.defaults.ollama_host:
-        lines.append(f"ollama_host = \"{cfg.defaults.ollama_host}\"")
+        lines.append(f'ollama_host = "{cfg.defaults.ollama_host}"')
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-

@@ -5,7 +5,6 @@ import textwrap
 from typing import Optional
 
 
-
 class EchoAdapter:
     """A local, dependency-free adapter for demos/tests.
 
@@ -38,8 +37,10 @@ class EchoAdapter:
             parts.append("Refinement based on peers' snippets:")
             if context_snippets:
                 # Keep it short to simulate quoting
-                quoted = textwrap.shorten(context_snippets.replace("\n", " "), width=160, placeholder="…")
-                parts.append(f"Considering: \"{quoted}\"")
+                quoted = textwrap.shorten(
+                    context_snippets.replace("\n", " "), width=160, placeholder="…"
+                )
+                parts.append(f'Considering: "{quoted}"')
             parts.append("One next check: validate assumptions with a small sample.")
         out = "\n".join(parts)
         if temperature is not None:

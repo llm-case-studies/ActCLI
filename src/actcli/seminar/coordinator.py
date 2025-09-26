@@ -31,15 +31,29 @@ async def _call_adapter(
         text = await loop.run_in_executor(
             None,
             lambda: adapter.generate(
-                prompt, seed=seed, timeout_s=timeout_s, round_index=round_index, context_snippets=context_snippets
+                prompt,
+                seed=seed,
+                timeout_s=timeout_s,
+                round_index=round_index,
+                context_snippets=context_snippets,
             ),
         )
         latency = int((time.perf_counter() - start) * 1000)
-        info = AdapterInfo(id=getattr(adapter, "name", "unknown"), name=getattr(adapter, "name", "unknown"), is_local=getattr(adapter, "is_local", False), model_version=getattr(adapter, "model_version", ""))
+        info = AdapterInfo(
+            id=getattr(adapter, "name", "unknown"),
+            name=getattr(adapter, "name", "unknown"),
+            is_local=getattr(adapter, "is_local", False),
+            model_version=getattr(adapter, "model_version", ""),
+        )
         return TurnResult(info=info, text=text, latency_ms=latency)
     except Exception as e:
         latency = int((time.perf_counter() - start) * 1000)
-        info = AdapterInfo(id=getattr(adapter, "name", "unknown"), name=getattr(adapter, "name", "unknown"), is_local=getattr(adapter, "is_local", False), model_version=getattr(adapter, "model_version", ""))
+        info = AdapterInfo(
+            id=getattr(adapter, "name", "unknown"),
+            name=getattr(adapter, "name", "unknown"),
+            is_local=getattr(adapter, "is_local", False),
+            model_version=getattr(adapter, "model_version", ""),
+        )
         return TurnResult(info=info, text="", latency_ms=latency, error=str(e))
 
 
@@ -55,7 +69,14 @@ async def run_round(
     tasks = [
         asyncio.create_task(
             asyncio.wait_for(
-                _call_adapter(a, prompt, seed=seed, timeout_s=timeout_s, round_index=round_index, context_snippets=context_snippets),
+                _call_adapter(
+                    a,
+                    prompt,
+                    seed=seed,
+                    timeout_s=timeout_s,
+                    round_index=round_index,
+                    context_snippets=context_snippets,
+                ),
                 timeout=timeout_s,
             )
         )
@@ -69,7 +90,15 @@ async def run_round(
         except asyncio.TimeoutError:
             # Build a minimal timeout result
             adapter = adapters[tasks.index(t)]
-            info = AdapterInfo(id=getattr(adapter, "name", "unknown"), name=getattr(adapter, "name", "unknown"), is_local=getattr(adapter, "is_local", False), model_version=getattr(adapter, "model_version", ""))
-            results.append(TurnResult(info=info, text="", latency_ms=timeout_s * 1000, error="timeout"))
+            info = AdapterInfo(
+                id=getattr(adapter, "name", "unknown"),
+                name=getattr(adapter, "name", "unknown"),
+                is_local=getattr(adapter, "is_local", False),
+                model_version=getattr(adapter, "model_version", ""),
+            )
+            results.append(
+                TurnResult(
+                    info=info, text="", latency_ms=timeout_s * 1000, error="timeout"
+                )
+            )
     return results
-

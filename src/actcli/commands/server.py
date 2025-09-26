@@ -5,7 +5,6 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
@@ -26,7 +25,14 @@ def _pid_alive(pid: int) -> bool:
         return True
 
 
-def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True, with_ui: bool = True, *, force: bool = False) -> None:
+def server_start(
+    host: str = "127.0.0.1",
+    port: int = 7530,
+    reload: bool = True,
+    with_ui: bool = True,
+    *,
+    force: bool = False,
+) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     if PID_FILE.exists():
         # Validate PID file; clean up stale, or stop active if --force
@@ -52,7 +58,9 @@ def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True,
                 except Exception:
                     pass
             else:
-                print(f"Server appears running (pid={pid}). Use `actcli server stop` or `actcli server start --force`.\n")
+                print(
+                    f"Server appears running (pid={pid}). Use `actcli server stop` or `actcli server start --force`.\n"
+                )
                 return
         else:
             # Stale pid file
@@ -64,7 +72,9 @@ def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True,
         with httpx.Client(timeout=1.5) as client:
             r = client.get(url)
             if r.status_code == 200:
-                print(f"A server is already responding at {url}. If this is an orphaned instance, stop it and retry.")
+                print(
+                    f"A server is already responding at {url}. If this is an orphaned instance, stop it and retry."
+                )
                 return
     except Exception:
         pass
@@ -72,8 +82,10 @@ def server_start(host: str = "127.0.0.1", port: int = 7530, reload: bool = True,
         "uvicorn",
         "semhost.main:create_app",
         "--factory",
-        "--host", host,
-        "--port", str(port),
+        "--host",
+        host,
+        "--port",
+        str(port),
     ]
     if reload:
         cmd.append("--reload")
@@ -109,11 +121,15 @@ def _kill_by_port(port: int) -> bool:
 
     Uses lsof or fuser if available. Returns True if at least one pid was signaled.
     """
-    import shutil, subprocess
+    import shutil
+    import subprocess
+
     killed = False
     try:
         if shutil.which("lsof"):
-            p = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=2)
+            p = subprocess.run(
+                ["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=2
+            )
             pids = [int(x) for x in (p.stdout or "").split() if x.strip().isdigit()]
             for pid in pids:
                 try:
@@ -127,14 +143,21 @@ def _kill_by_port(port: int) -> bool:
             return killed
         if shutil.which("fuser"):
             # fuser -k sends SIGKILL by default on some systems; be explicit with -TERM first
-            subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True, text=True, timeout=2)
+            subprocess.run(
+                ["fuser", "-k", f"{port}/tcp"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
             return True
     except Exception:
         pass
     return killed
 
 
-def server_stop(host: str = "127.0.0.1", port: int = 7530, *, force_port: bool = False) -> None:
+def server_stop(
+    host: str = "127.0.0.1", port: int = 7530, *, force_port: bool = False
+) -> None:
     if not PID_FILE.exists():
         print("No pid file; server may not be running.")
         # If /health responds and --force-port, attempt port kill

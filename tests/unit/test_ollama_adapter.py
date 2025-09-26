@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
+
 respx = pytest.importorskip("respx")
 
 from actcli.seminar.adapters.ollama import OllamaAdapter
@@ -32,7 +33,9 @@ def test_ollama_generate_payload_and_seed() -> None:
 
 @respx.mock
 def test_ollama_error_wrapped() -> None:
-    respx.post("http://mock/api/generate").respond(status_code=404, json={"error": "missing"})
+    respx.post("http://mock/api/generate").respond(
+        status_code=404, json={"error": "missing"}
+    )
     a = OllamaAdapter(model="llama3", host="http://mock")
     try:
         a.generate("oops", timeout_s=1)

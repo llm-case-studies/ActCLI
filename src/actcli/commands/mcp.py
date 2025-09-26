@@ -23,13 +23,21 @@ def mcp_list() -> None:
     table.add_column("Group")
     table.add_column("Log")
     for name, s in cfg.servers.items():
-        table.add_row(name, s.url, "on" if s.enabled else "off", s.group or "", "on" if s.log else "off")
+        table.add_row(
+            name,
+            s.url,
+            "on" if s.enabled else "off",
+            s.group or "",
+            "on" if s.log else "off",
+        )
     console.print(Panel(table, border_style="cyan"))
 
 
 def mcp_add(name: str, url: str, group: Optional[str], desc: Optional[str]) -> None:
     cfg = load_mcp_config()
-    cfg.servers[name] = MCPServer(name=name, url=url, enabled=True, group=group, desc=desc)
+    cfg.servers[name] = MCPServer(
+        name=name, url=url, enabled=True, group=group, desc=desc
+    )
     save_project_mcp_config(cfg)
     console.print(Panel(f"Added MCP: {name} → {url}", border_style="green"))
 
@@ -79,7 +87,12 @@ def mcp_test(name: str) -> None:
         console.print(f"Unknown MCP: {name}")
         raise SystemExit(2)
     status = _probe(s.url)
-    console.print(Panel(f"{name}: {status}", border_style=("green" if status.startswith("healthy") else "yellow")))
+    console.print(
+        Panel(
+            f"{name}: {status}",
+            border_style=("green" if status.startswith("healthy") else "yellow"),
+        )
+    )
 
 
 def mcp_reload(name: str) -> None:
@@ -96,7 +109,11 @@ def mcp_reload(name: str) -> None:
         if r.status_code // 100 == 2:
             console.print(Panel(f"Reload triggered for {name}", border_style="green"))
         else:
-            console.print(Panel(f"Reload failed: {r.status_code} {r.text[:120]}", border_style="red"))
+            console.print(
+                Panel(
+                    f"Reload failed: {r.status_code} {r.text[:120]}", border_style="red"
+                )
+            )
 
 
 def mcp_restart(name: str) -> None:
@@ -111,4 +128,3 @@ def mcp_restart(name: str) -> None:
     # Fire-and-forget shell command
     os.system(s.restart_cmd)
     console.print(Panel(f"Restart command invoked for {name}", border_style="green"))
-

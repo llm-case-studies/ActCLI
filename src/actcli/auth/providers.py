@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional
 import time
-import os
 import httpx
 
 from .store import CredentialStore, Credentials
@@ -33,9 +32,16 @@ class Provider:
             key = os.getenv(self.env_key or "")
             if not key:
                 # For prototype: we don't prompt; instruct user to set env
-                raise SystemExit(f"Set {self.env_key} or use --method device/pkce if supported")
+                raise SystemExit(
+                    f"Set {self.env_key} or use --method device/pkce if supported"
+                )
             if self.store:
-                self.store.set(self.id, Credentials(method="api-key", token=None, info={"env": self.env_key}))
+                self.store.set(
+                    self.id,
+                    Credentials(
+                        method="api-key", token=None, info={"env": self.env_key}
+                    ),
+                )
         elif method == "pkce":
             # Generic PKCE flow configured via env vars:
             #   <PROVIDER>_OAUTH_CLIENT_ID, <PROVIDER>_OAUTH_AUTH_URL, <PROVIDER>_OAUTH_TOKEN_URL, <PROVIDER>_OAUTH_SCOPE(optional)
@@ -49,12 +55,26 @@ class Provider:
                 )
             if not self.store:
                 raise SystemExit("Credential store not available")
-            access_token, exp = pkce_browser_login(OAuthConfig(auth_url=auth_url, token_url=token_url, client_id=cid, scope=scope))
-            self.store.set(f"{self.id}_oauth", Credentials(method="pkce", token=access_token, info={"expires_at": exp}))
+            access_token, exp = pkce_browser_login(
+                OAuthConfig(
+                    auth_url=auth_url, token_url=token_url, client_id=cid, scope=scope
+                )
+            )
+            self.store.set(
+                f"{self.id}_oauth",
+                Credentials(
+                    method="pkce", token=access_token, info={"expires_at": exp}
+                ),
+            )
         else:
             # Placeholder for OAuth device
             if self.store:
-                self.store.set(self.id, Credentials(method=method, token=None, info={"note": "oauth placeholder"}))
+                self.store.set(
+                    self.id,
+                    Credentials(
+                        method=method, token=None, info={"note": "oauth placeholder"}
+                    ),
+                )
         self.method = method
 
     def logout(self) -> None:
@@ -75,7 +95,9 @@ class ProviderRegistry:
         store = CredentialStore()
         providers = {
             "openai": Provider(id="openai", env_key="OPENAI_API_KEY", store=store),
-            "anthropic": Provider(id="anthropic", env_key="ANTHROPIC_API_KEY", store=store),
+            "anthropic": Provider(
+                id="anthropic", env_key="ANTHROPIC_API_KEY", store=store
+            ),
             "google": Provider(id="google", env_key="GOOGLE_API_KEY", store=store),
         }
         return cls(providers)
@@ -101,10 +123,13 @@ class GoogleOAuthDevice:
     def login(self) -> None:
         with httpx.Client(timeout=10) as client:
             # 1) Get device code
-            r = client.post(self.DEVICE_CODE_URL, data={
-                "client_id": self.client_id,
-                "scope": self.SCOPE,
-            })
+            r = client.post(
+                self.DEVICE_CODE_URL,
+                data={
+                    "client_id": self.client_id,
+                    "scope": self.SCOPE,
+                },
+            )
             r.raise_for_status()
             data = r.json()
             device_code = data["device_code"]
@@ -119,22 +144,32 @@ class GoogleOAuthDevice:
             start = time.time()
             while time.time() - start < expires_in:
                 time.sleep(interval)
-                pr = client.post(self.TOKEN_URL, data={
-                    "client_id": self.client_id,
-                    "device_code": device_code,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                })
+                pr = client.post(
+                    self.TOKEN_URL,
+                    data={
+                        "client_id": self.client_id,
+                        "device_code": device_code,
+                        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                    },
+                )
                 if pr.status_code == 200:
                     tok = pr.json()
                     access_token = tok["access_token"]
                     refresh_token = tok.get("refresh_token")
                     expires_at = int(time.time() + tok.get("expires_in", 3600))
-                    self.store.set("google_oauth", Credentials(method="device", token=access_token, info={
-                        "refresh_token": refresh_token,
-                        "expires_at": expires_at,
-                        "client_id": self.client_id,
-                        "scope": self.SCOPE,
-                    }))
+                    self.store.set(
+                        "google_oauth",
+                        Credentials(
+                            method="device",
+                            token=access_token,
+                            info={
+                                "refresh_token": refresh_token,
+                                "expires_at": expires_at,
+                                "client_id": self.client_id,
+                                "scope": self.SCOPE,
+                            },
+                        ),
+                    )
                     print("Google OAuth device login successful.")
                     return
                 else:

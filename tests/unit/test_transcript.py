@@ -5,7 +5,11 @@ from pathlib import Path
 
 from actcli.seminar.adapters.base import AdapterInfo
 from actcli.seminar.coordinator import TurnResult
-from actcli.transcript import write_audit_json, write_presenter_state, write_transcript_md
+from actcli.transcript import (
+    write_audit_json,
+    write_presenter_state,
+    write_transcript_md,
+)
 
 
 def _result(model: str, text: str) -> TurnResult:
@@ -30,9 +34,10 @@ def test_transcript_writers(tmp_path: Path) -> None:
     assert data["disagreement_score"] == 0.25
     assert len(data["participants"]) == 2
 
-    write_presenter_state(state, prompt="P", results=results, synthesis="S", disagreement=0.25)
+    write_presenter_state(
+        state, prompt="P", results=results, synthesis="S", disagreement=0.25
+    )
     s = json.loads(state.read_text())
     assert s["prompt"] == "P"
     assert s["synthesis"] == "S"
     assert len(s["results"]) == 2
-

@@ -12,7 +12,9 @@ def cli_runner() -> CliRunner:
 
 
 @pytest.fixture(autouse=True)
-def _force_xdg_tmp(monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory) -> None:
+def _force_xdg_tmp(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     # Redirect user config dir used by platformdirs to a temp location for all tests
     xdg = tmp_path_factory.mktemp("xdg")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))

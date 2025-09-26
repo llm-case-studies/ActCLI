@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 
 import pytest
 
@@ -19,7 +18,9 @@ from actcli.models.registry import (
 def test_openai_and_google_listing_and_cache(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     # OpenAI mocked list
-    respx.get("https://api.openai.com/v1/models").respond(json={"data": [{"id": "gpt-4o-mini"}]})
+    respx.get("https://api.openai.com/v1/models").respond(
+        json={"data": [{"id": "gpt-4o-mini"}]}
+    )
     rows = list_models_openai("key", refresh=True)
     assert any(m.model_id == "gpt-4o-mini" for m in rows)
     c = cache_read("openai")
@@ -29,7 +30,10 @@ def test_openai_and_google_listing_and_cache(monkeypatch, tmp_path) -> None:
     respx.get("https://generativelanguage.googleapis.com/v1/models").respond(
         json={
             "models": [
-                {"name": "gemini-1.5-flash-latest", "supportedGenerationMethods": ["generateContent"]},
+                {
+                    "name": "gemini-1.5-flash-latest",
+                    "supportedGenerationMethods": ["generateContent"],
+                },
                 {"name": "vision-only", "supportedGenerationMethods": []},
             ]
         }
@@ -44,4 +48,3 @@ def test_anthropic_pinned(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     rows = list_models_anthropic("key", refresh=True)
     assert len(rows) > 0
-

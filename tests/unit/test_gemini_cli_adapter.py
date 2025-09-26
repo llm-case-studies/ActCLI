@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import subprocess
 
-import pytest
 
 from actcli.seminar.adapters.gemini_cli import GeminiCLIAdapter
 
@@ -20,10 +19,9 @@ def test_gemini_cli_parses_json(monkeypatch):
     payload = {"text": "Gemini says hi"}
 
     def _run(args, capture_output, text, timeout):
-        return _P(stdout="{\n\"text\": \"Gemini says hi\"\n}", stderr="", code=0)
+        return _P(stdout='{\n"text": "Gemini says hi"\n}', stderr="", code=0)
 
     monkeypatch.setattr(subprocess, "run", _run)
     adapter = GeminiCLIAdapter(model="default")
     out = adapter.generate("Hello", timeout_s=5)
     assert out.strip() == "Gemini says hi"
-

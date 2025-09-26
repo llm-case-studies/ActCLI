@@ -2,6 +2,7 @@
 True Claude CLI-style layout using prompt_toolkit Application.
 This implements proper terminal layout control like TypeScript CLIs.
 """
+
 from __future__ import annotations
 
 from typing import Optional, Callable, Any
@@ -17,6 +18,7 @@ from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.margins import ScrollbarMargin
 from prompt_toolkit.styles import Style
+
 # Removed unused Frame import
 from rich.console import Console
 
@@ -30,50 +32,64 @@ class ActCLICompleter(Completer):
     def __init__(self, commands: list[str]):
         self.commands = commands
         self.command_descriptions = {
-            '/help': 'Show available commands',
-            '/models': 'Manage AI models',
-            '/models add': 'Add a new model',
-            '/models remove': 'Remove a model',
-            '/rounds': 'Set discussion rounds (1-3)',
-            '/ollama': 'Configure Ollama host',
-            '/save': 'Save transcript and audit',
-            '/trust': 'Manage folder trust settings',
-            '/share': 'Configure cloud sharing',
-            '/mcp': 'Manage MCP servers',
-            '/quit': 'Exit the application',
-            '/?': 'Quick help',
+            "/help": "Show available commands",
+            "/models": "Manage AI models",
+            "/models add": "Add a new model",
+            "/models remove": "Remove a model",
+            "/rounds": "Set discussion rounds (1-3)",
+            "/ollama": "Configure Ollama host",
+            "/save": "Save transcript and audit",
+            "/trust": "Manage folder trust settings",
+            "/share": "Configure cloud sharing",
+            "/mcp": "Manage MCP servers",
+            "/quit": "Exit the application",
+            "/?": "Quick help",
         }
 
     def get_completions(self, document: Document, complete_event):
         text = document.text_before_cursor
-        if not text.startswith('/'):
+        if not text.startswith("/"):
             return
 
         for cmd in self.commands:
             if cmd.startswith(text):
                 description = self.command_descriptions.get(cmd, "")
                 yield Completion(
-                    cmd[len(text):],
+                    cmd[len(text) :],
                     start_position=0,
-                    display=f"{cmd} - {description}" if description else cmd
+                    display=f"{cmd} - {description}" if description else cmd,
                 )
 
 
 class ClaudeStyleCLI:
     """Claude CLI-style terminal application with proper layout."""
 
-    def __init__(self,
-                 on_input: Optional[Callable[[str], Any]] = None,
-                 get_status: Optional[Callable[[], str]] = None):
+    def __init__(
+        self,
+        on_input: Optional[Callable[[str], Any]] = None,
+        get_status: Optional[Callable[[], str]] = None,
+    ):
         self.on_input = on_input or (lambda x: None)
         self.get_status = get_status or (lambda: "ActCLI • MODE: OFFLINE • audit: ON")
 
         # Create the input buffer
         self.input_buffer = Buffer(
-            completer=ActCLICompleter([
-                '/help', '/?', '/models', '/models add', '/models remove',
-                '/rounds', '/ollama', '/save', '/trust', '/share', '/mcp', '/quit'
-            ]),
+            completer=ActCLICompleter(
+                [
+                    "/help",
+                    "/?",
+                    "/models",
+                    "/models add",
+                    "/models remove",
+                    "/rounds",
+                    "/ollama",
+                    "/save",
+                    "/trust",
+                    "/share",
+                    "/mcp",
+                    "/quit",
+                ]
+            ),
             complete_while_typing=True,
         )
 
@@ -97,28 +113,30 @@ class ClaudeStyleCLI:
 
         # Create layout - this is the key difference!
         self.layout = Layout(
-            HSplit([
-                # Header/Status bar
-                Window(
-                    content=self.status_control,
-                    height=3,
-                    style="class:status-bar",
-                ),
-                # Content area (conversation history)
-                Window(
-                    content=self.content_control,
-                    wrap_lines=True,
-                    right_margins=[ScrollbarMargin(display_arrows=True)],
-                ),
-                # Input area with space above and below
-                Window(height=1),  # Space above input
-                Window(
-                    content=self.input_control,
-                    height=1,
-                    style="class:input-area",
-                ),
-                Window(height=2),  # Space below input for status
-            ])
+            HSplit(
+                [
+                    # Header/Status bar
+                    Window(
+                        content=self.status_control,
+                        height=3,
+                        style="class:status-bar",
+                    ),
+                    # Content area (conversation history)
+                    Window(
+                        content=self.content_control,
+                        wrap_lines=True,
+                        right_margins=[ScrollbarMargin(display_arrows=True)],
+                    ),
+                    # Input area with space above and below
+                    Window(height=1),  # Space above input
+                    Window(
+                        content=self.input_control,
+                        height=1,
+                        style="class:input-area",
+                    ),
+                    Window(height=2),  # Space below input for status
+                ]
+            )
         )
 
         # Key bindings
@@ -126,13 +144,15 @@ class ClaudeStyleCLI:
         self._setup_key_bindings()
 
         # Style
-        self.style = Style.from_dict({
-            'status-bar': 'bg:#003366 #ffffff bold',
-            'input-area': '#ffffff',
-            'input': '#ffffff',
-            'completion-menu.completion': 'bg:#003366 #ffffff',
-            'completion-menu.completion.current': 'bg:#00aaaa #000000 bold',
-        })
+        self.style = Style.from_dict(
+            {
+                "status-bar": "bg:#003366 #ffffff bold",
+                "input-area": "#ffffff",
+                "input": "#ffffff",
+                "completion-menu.completion": "bg:#003366 #ffffff",
+                "completion-menu.completion.current": "bg:#00aaaa #000000 bold",
+            }
+        )
 
         # Create the application
         self.app = Application(
@@ -146,7 +166,7 @@ class ClaudeStyleCLI:
         self.conversation_history = []
 
     def _setup_key_bindings(self):
-        @self.kb.add('enter')
+        @self.kb.add("enter")
         def _(event):
             text = self.input_buffer.text.strip()
             if text:
@@ -160,18 +180,18 @@ class ClaudeStyleCLI:
                     if response:
                         self.conversation_history.append(f"System: {response}")
 
-        @self.kb.add('c-c')
+        @self.kb.add("c-c")
         def _(event):
             event.app.exit()
 
-        @self.kb.add('c-d')
+        @self.kb.add("c-d")
         def _(event):
             event.app.exit()
 
     def _get_status_text(self):
         """Get the status bar text."""
         status = self.get_status()
-        return HTML(f'<status-bar>  {status}  </status-bar>')
+        return HTML(f"<status-bar>  {status}  </status-bar>")
 
     def _get_content_text(self):
         """Get the conversation content."""
@@ -197,7 +217,7 @@ Start by typing a question about actuarial topics...</dim>
             else:
                 formatted.append(line)
 
-        return HTML('\n'.join(formatted))
+        return HTML("\n".join(formatted))
 
     async def run_async(self):
         """Run the application asynchronously."""
@@ -214,7 +234,7 @@ Start by typing a question about actuarial topics...</dim>
 
 def create_claude_style_repl(
     on_input: Optional[Callable[[str], str]] = None,
-    get_status: Optional[Callable[[], str]] = None
+    get_status: Optional[Callable[[], str]] = None,
 ) -> ClaudeStyleCLI:
     """Create a Claude CLI-style REPL interface."""
     return ClaudeStyleCLI(on_input=on_input, get_status=get_status)

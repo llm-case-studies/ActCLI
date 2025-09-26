@@ -68,19 +68,25 @@ class GeminiCLIAdapter:
 
         attempts = []
         if model and model != "default":
-            attempts.extend([
-                ["gemini", "-p", full_prompt, "--model", model],
-                ["gemini", "ask", "--model", model, full_prompt],
-            ])
-        attempts.extend([
-            ["gemini", "-p", full_prompt],
-            ["gemini", "ask", full_prompt],
-        ])
+            attempts.extend(
+                [
+                    ["gemini", "-p", full_prompt, "--model", model],
+                    ["gemini", "ask", "--model", model, full_prompt],
+                ]
+            )
+        attempts.extend(
+            [
+                ["gemini", "-p", full_prompt],
+                ["gemini", "ask", full_prompt],
+            ]
+        )
 
         res = None
         for cmd in attempts:
             try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
+                res = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=timeout_s, env=env
+                )
                 if res.returncode == 0 and (res.stdout or "").strip():
                     break
             except subprocess.TimeoutExpired:
@@ -90,7 +96,11 @@ class GeminiCLIAdapter:
                 continue
 
         if res is None or res.returncode != 0:
-            err = (res.stderr if res else "").strip() or (res.stdout if res else "").strip() or "unknown error"
+            err = (
+                (res.stderr if res else "").strip()
+                or (res.stdout if res else "").strip()
+                or "unknown error"
+            )
             raise RuntimeError(f"Gemini CLI failed: {err}")
 
         raw = (res.stdout or "").strip()
@@ -114,7 +124,11 @@ class GeminiCLIAdapter:
             s = ln.strip()
             if not s:
                 return False
-            if s == prompt.strip() or s.startswith("Original prompt:") or s.startswith("System:"):
+            if (
+                s == prompt.strip()
+                or s.startswith("Original prompt:")
+                or s.startswith("System:")
+            ):
                 return False
             if s.lstrip().startswith("["):
                 return False

@@ -40,10 +40,12 @@ class GitMCPClient:
             if log_enabled and server_name:
                 try:
                     from pathlib import Path
+
                     log_dir = Path("out/mcp-logs")
                     log_dir.mkdir(parents=True, exist_ok=True)
                     (log_dir / f"{server_name}.log").write_text(
-                        f"op={op}\nparams={params}\nresponse={data}\n\n", encoding="utf-8"
+                        f"op={op}\nparams={params}\nresponse={data}\n\n",
+                        encoding="utf-8",
                     )
                 except Exception:
                     pass
@@ -92,10 +94,19 @@ class GitMCPClient:
                 pass
         self.local.add(paths)
 
-    def commit(self, message: str, signoff: bool = False, allow_empty: bool = False) -> str:
+    def commit(
+        self, message: str, signoff: bool = False, allow_empty: bool = False
+    ) -> str:
         if self.base_url:
             try:
-                res = self._post("commit", {"message": message, "signoff": signoff, "allow_empty": allow_empty})
+                res = self._post(
+                    "commit",
+                    {
+                        "message": message,
+                        "signoff": signoff,
+                        "allow_empty": allow_empty,
+                    },
+                )
                 if res.get("ok") and res.get("data", {}).get("hash"):
                     return res["data"]["hash"]
             except Exception:
@@ -105,24 +116,39 @@ class GitMCPClient:
     def push(self, remote: str, branch: str) -> None:
         if self.base_url:
             try:
-                self._post("push", {"remote": remote, "branch": branch, "set_upstream": True})
+                self._post(
+                    "push", {"remote": remote, "branch": branch, "set_upstream": True}
+                )
                 return
             except Exception:
                 pass
         self.local.push(remote, branch, set_upstream=True)
 
-    def pr_link(self, remote: str, target: Optional[str], title: str, body: str) -> Optional[str]:
+    def pr_link(
+        self, remote: str, target: Optional[str], title: str, body: str
+    ) -> Optional[str]:
         info = self.local.detect()
         remote_url = info.remotes.get(remote) if info.remotes else None
         branch = info.branch or ""
         target_branch = target or info.default_branch
         if self.base_url:
             try:
-                res = self._post("pr_link", {"remote": remote, "target": target_branch, "branch": branch, "title": title, "body": body})
+                res = self._post(
+                    "pr_link",
+                    {
+                        "remote": remote,
+                        "target": target_branch,
+                        "branch": branch,
+                        "title": title,
+                        "body": body,
+                    },
+                )
                 if res.get("ok") and res.get("data", {}).get("url"):
                     return res["data"]["url"]
             except Exception:
                 pass
         if remote_url:
-            return self.local.pr_url(remote_url, target_branch, branch, title=title, body=body)
+            return self.local.pr_url(
+                remote_url, target_branch, branch, title=title, body=body
+            )
         return None

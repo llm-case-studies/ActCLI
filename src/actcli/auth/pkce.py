@@ -67,7 +67,9 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         return
 
 
-def pkce_browser_login(cfg: OAuthConfig, timeout_s: int = 300) -> tuple[str, Optional[int]]:
+def pkce_browser_login(
+    cfg: OAuthConfig, timeout_s: int = 300
+) -> tuple[str, Optional[int]]:
     """Perform PKCE browser login. Returns (access_token, expires_at).
 
     Starts localhost callback server, opens browser to provider login, exchanges code for token.
@@ -132,4 +134,3 @@ def pkce_browser_login(cfg: OAuthConfig, timeout_s: int = 300) -> tuple[str, Opt
             raise RuntimeError("No access_token in response")
         expires_at = int(time.time() + int(expires_in)) if expires_in else None
         return access_token, expires_at
-
