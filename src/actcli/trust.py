@@ -50,14 +50,20 @@ def get_trust(root: Optional[Path] = None) -> Optional[TrustRecord]:
     )
 
 
-def set_trust(root: Optional[Path], scope: str, read: List[str], write: List[str], cloud_share: bool) -> Path:
+def set_trust(
+    root: Optional[Path],
+    scope: str,
+    read: List[str],
+    write: List[str],
+    cloud_share: bool,
+) -> Path:
     root = root or Path.cwd()
     path = _record_path(root)
     content = [
-        f"path = \"{str(root)}\"",
-        f"scope = \"{scope}\"",
-        "read = [" + ", ".join(f"\"{g}\"" for g in read) + "]",
-        "write = [" + ", ".join(f"\"{g}\"" for g in write) + "]",
+        f'path = "{str(root)}"',
+        f'scope = "{scope}"',
+        "read = [" + ", ".join(f'"{g}"' for g in read) + "]",
+        "write = [" + ", ".join(f'"{g}"' for g in write) + "]",
         f"cloud_share = {str(cloud_share).lower()}",
     ]
     path.write_text("\n".join(content) + "\n", encoding="utf-8")
@@ -69,4 +75,3 @@ def revoke_trust(root: Optional[Path] = None) -> None:
     path = _record_path(root)
     if path.exists():
         path.unlink()
-

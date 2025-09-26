@@ -41,7 +41,9 @@ def test_run_round_behaviour() -> None:
         _FakeAdapter("err", fail=True),
     ]
     # Use small timeout to trigger one timeout
-    results = asyncio.run(run_round(adapters, "q", seed=1, timeout_s=0.1, round_index=1))
+    results = asyncio.run(
+        run_round(adapters, "q", seed=1, timeout_s=0.1, round_index=1)
+    )
     assert len(results) == 3
     texts = {r.info.name: (r.text, r.error) for r in results}
     assert texts["fast"][0] == "ok"

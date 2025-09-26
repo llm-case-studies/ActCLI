@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 respx = pytest.importorskip("respx")
 import httpx  # noqa: E402
 
@@ -21,7 +22,9 @@ def test_anthropic_generate(monkeypatch) -> None:
 @respx.mock
 def test_anthropic_error(monkeypatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "ak-test")
-    respx.post("https://api.anthropic.com/v1/messages").respond(status_code=500, json={"error": "x"})
+    respx.post("https://api.anthropic.com/v1/messages").respond(
+        status_code=500, json={"error": "x"}
+    )
     a = AnthropicAdapter()
     try:
         a.generate("q")

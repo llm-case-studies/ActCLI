@@ -19,4 +19,3 @@ def test_duplicate_participants_via_aliases(tmp_path: Path) -> None:
     )
     text = md.read_text()
     assert text.count("### A ") + text.count("### B ") >= 2
-

@@ -24,4 +24,3 @@ def test_params_snapshot_and_mood_application() -> None:
     orch = RoundOrchestrator()
     # TODO: verify that per-participant temperature/system are captured per round
     assert orch.state.window_k == 2
-

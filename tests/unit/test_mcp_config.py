@@ -52,5 +52,4 @@ log = false
     mod.save_project_mcp_config(cfg)
     text = mod.get_project_file().read_text()
     assert "[servers.a]" in text and "[servers.b]" in text
-    assert "url = \"http://project-b\"" in text
-
+    assert 'url = "http://project-b"' in text

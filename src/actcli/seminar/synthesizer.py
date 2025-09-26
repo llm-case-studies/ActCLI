@@ -23,4 +23,3 @@ def summarize(results: List[TurnResult]) -> Tuple[str, float]:
     points = list(inter)[:5]
     synthesis = "Agreements: " + (", ".join(points) if points else "(few)")
     return (synthesis, round(disagreement, 2))
-

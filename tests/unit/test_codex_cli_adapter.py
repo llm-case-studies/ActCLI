@@ -59,4 +59,3 @@ def test_codex_cli_timeout(monkeypatch):
     with pytest.raises(RuntimeError) as ei:
         a.generate("Q", timeout_s=1)
     assert "timeout" in str(ei.value).lower()
-

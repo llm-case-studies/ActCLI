@@ -36,18 +36,44 @@ def run_doctor() -> None:
     # Python
     checks.append(Check("Python", "ok", platform.python_version()))
     # TTY
-    checks.append(Check("TTY", "ok" if console.is_terminal else "warn", "interactive" if console.is_terminal else "non-interactive"))
+    checks.append(
+        Check(
+            "TTY",
+            "ok" if console.is_terminal else "warn",
+            "interactive" if console.is_terminal else "non-interactive",
+        )
+    )
     # Color
-    checks.append(Check("Color", "ok" if console.color_system else "warn", str(console.color_system)))
+    checks.append(
+        Check(
+            "Color", "ok" if console.color_system else "warn", str(console.color_system)
+        )
+    )
     # Ollama
     if shutil.which("ollama"):
         code, out = _run(["ollama", "--version"])
-        checks.append(Check("ollama", "ok" if code == 0 else "warn", out.splitlines()[0] if out else ""))
+        checks.append(
+            Check(
+                "ollama",
+                "ok" if code == 0 else "warn",
+                out.splitlines()[0] if out else "",
+            )
+        )
     else:
         checks.append(Check("ollama", "warn", "binary not found"))
     # API keys
-    for key, label in [("OPENAI_API_KEY", "OpenAI"), ("ANTHROPIC_API_KEY", "Anthropic"), ("GOOGLE_API_KEY", "Google")]:
-        checks.append(Check(label + " auth", "ok" if os.getenv(key) else "info", key + (" set" if os.getenv(key) else " not set")))
+    for key, label in [
+        ("OPENAI_API_KEY", "OpenAI"),
+        ("ANTHROPIC_API_KEY", "Anthropic"),
+        ("GOOGLE_API_KEY", "Google"),
+    ]:
+        checks.append(
+            Check(
+                label + " auth",
+                "ok" if os.getenv(key) else "info",
+                key + (" set" if os.getenv(key) else " not set"),
+            )
+        )
 
     # Render
     table = Table(title="Environment Checks", show_header=True, header_style="bold")
@@ -83,7 +109,11 @@ def build_doctor_lite_panel() -> Panel:
     else:
         items.append("Ollama: not found")
     # API keys
-    keys = [k for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY") if os.getenv(k)]
+    keys = [
+        k
+        for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY")
+        if os.getenv(k)
+    ]
     items.append(f"API keys: {len(keys)} set")
 
     txt = Text()

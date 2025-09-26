@@ -2,6 +2,7 @@
 Enhanced CLI layout system inspired by Claude CLI's design.
 Creates proper input area with status space and clean visual hierarchy.
 """
+
 from __future__ import annotations
 
 
@@ -22,23 +23,23 @@ class CLILayout:
     def __init__(self):
         self.last_status = ""
 
-    def create_status_header(self, mode: str, models: list[str], audit: bool = True) -> Panel:
+    def create_status_header(
+        self, mode: str, models: list[str], audit: bool = True
+    ) -> Panel:
         """Create persistent status header similar to Claude CLI."""
         status_text = Text()
         status_text.append("ActCLI", style="bold cyan")
         status_text.append(" • chat(seminar) • ", style="dim")
-        status_text.append(f"MODE: {mode.upper()}", style="bright_yellow" if mode == "HYBRID" else "bright_green")
+        status_text.append(
+            f"MODE: {mode.upper()}",
+            style="bright_yellow" if mode == "HYBRID" else "bright_green",
+        )
         status_text.append(" • participants: ", style="dim")
         status_text.append(", ".join(models), style="cyan")
         status_text.append(" • audit: ", style="dim")
         status_text.append("ON" if audit else "OFF", style="green" if audit else "red")
 
-        return Panel(
-            status_text,
-            height=3,
-            border_style="bright_black",
-            padding=(0, 1)
-        )
+        return Panel(status_text, height=3, border_style="bright_black", padding=(0, 1))
 
     def create_input_area(self, prompt_text: str = "actcli> ") -> Panel:
         """Create input area with proper spacing like Claude CLI."""
@@ -46,7 +47,7 @@ class CLILayout:
             Padding(Text(prompt_text, style="bright_cyan"), (0, 1)),
             height=3,
             border_style="cyan",
-            title="Input"
+            title="Input",
         )
         return input_panel
 
@@ -66,28 +67,27 @@ class CLILayout:
     def render_model_responses_grid(self, results) -> Panel:
         """Render model responses in a cleaner grid format."""
         # Create a more readable table structure
-        table = Table(show_header=True, header_style="bold cyan", border_style="bright_black")
+        table = Table(
+            show_header=True, header_style="bold cyan", border_style="bright_black"
+        )
         table.add_column("Model", style="cyan", width=12)
         table.add_column("Response", style="white", overflow="fold")
         table.add_column("Time", style="dim", width=8, justify="right")
 
         for result in results:
-            status = result.text if result.text else f"[red]{result.error or 'no output'}[/red]"
+            status = (
+                result.text
+                if result.text
+                else f"[red]{result.error or 'no output'}[/red]"
+            )
             # Truncate long responses for grid view
             if len(status) > 120:
                 status = status[:117] + "..."
 
-            table.add_row(
-                result.info.name,
-                status,
-                f"{result.latency_ms}ms"
-            )
+            table.add_row(result.info.name, status, f"{result.latency_ms}ms")
 
         return Panel(
-            table,
-            title="Model Responses",
-            border_style="cyan",
-            padding=(0, 1)
+            table, title="Model Responses", border_style="cyan", padding=(0, 1)
         )
 
 

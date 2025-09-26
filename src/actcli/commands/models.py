@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 import httpx
 from rich.console import Console
@@ -35,21 +35,29 @@ def list_models(ollama_host: Optional[str]) -> None:
             resp.raise_for_status()
             data = resp.json()
     except Exception as e:
-        console.print(Panel(str(e), title="Unable to reach Ollama host", border_style="red"))
+        console.print(
+            Panel(str(e), title="Unable to reach Ollama host", border_style="red")
+        )
         console.print("Tip: start the project server: scripts/ollama-local.sh serve")
         return
 
     models = data.get("models", [])
-    table = Table(title=f"Ollama models @ {host}", show_header=True, header_style="bold")
+    table = Table(
+        title=f"Ollama models @ {host}", show_header=True, header_style="bold"
+    )
     table.add_column("Name", style="cyan")
     table.add_column("Modified")
     table.add_column("Size")
     for m in models:
-        table.add_row(m.get("name", ""), m.get("modified_at", ""), str(m.get("size", "")))
+        table.add_row(
+            m.get("name", ""), m.get("modified_at", ""), str(m.get("size", ""))
+        )
     console.print(Panel(table, border_style="cyan"))
 
 
-def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: Optional[str] = None) -> None:
+def list_provider_models(
+    provider: str, *, refresh: bool = False, ollama_host: Optional[str] = None
+) -> None:
     """List models for a provider (ollama|openai|anthropic|google|claude_cli|codex_cli).
 
     Falls back to curated lists for providers that don't expose listing or when unauthenticated.
@@ -92,7 +100,9 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
             models = [{"name": m.model_id, "description": m.display_name} for m in rows]
         elif provider in ("all", "*"):
             # Aggregate view across providers with source/auth columns
-            table = Table(title="Models • all providers", show_header=True, header_style="bold")
+            table = Table(
+                title="Models • all providers", show_header=True, header_style="bold"
+            )
             table.add_column("Provider", style="magenta")
             table.add_column("Name", style="cyan")
             table.add_column("Source", style="dim")
@@ -122,9 +132,20 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
             except Exception:
                 pass
             # Cloud APIs
-            for p, func in ("openai", list_models_openai), ("anthropic", list_models_anthropic), ("google", list_models_google):
+            for p, func in (
+                ("openai", list_models_openai),
+                ("anthropic", list_models_anthropic),
+                ("google", list_models_google),
+            ):
                 try:
-                    key = os.getenv({"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY"}[p], "")
+                    key = os.getenv(
+                        {
+                            "openai": "OPENAI_API_KEY",
+                            "anthropic": "ANTHROPIC_API_KEY",
+                            "google": "GOOGLE_API_KEY",
+                        }[p],
+                        "",
+                    )
                     for m in func(key, refresh=refresh):
                         table.add_row(p, m.model_id, "cloud(api)", _auth_for(p))
                 except Exception:
@@ -132,12 +153,16 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
             # CLI-backed
             try:
                 for m in list_models_claude_cli(refresh=refresh):
-                    table.add_row("claude_cli", m.model_id, "cloud(cli)", _auth_for("claude_cli"))
+                    table.add_row(
+                        "claude_cli", m.model_id, "cloud(cli)", _auth_for("claude_cli")
+                    )
             except Exception:
                 pass
             try:
                 for m in list_models_codex_cli(refresh=refresh):
-                    table.add_row("codex_cli", m.model_id, "cloud(cli)", _auth_for("codex_cli"))
+                    table.add_row(
+                        "codex_cli", m.model_id, "cloud(cli)", _auth_for("codex_cli")
+                    )
             except Exception:
                 pass
 
@@ -147,7 +172,9 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
             console.print(Panel(f"Unknown provider: {provider}", border_style="red"))
             return
     except Exception as e:
-        console.print(Panel(str(e), title=f"{provider} listing error", border_style="red"))
+        console.print(
+            Panel(str(e), title=f"{provider} listing error", border_style="red")
+        )
         return
 
     table = Table(title=title, show_header=True, header_style="bold")
@@ -165,7 +192,9 @@ def list_provider_models(provider: str, *, refresh: bool = False, ollama_host: O
     console.print(Panel(table, border_style="cyan"))
 
 
-def pull_models(ollama_host: Optional[str], ids: Optional[List[str]], use_default: bool) -> None:
+def pull_models(
+    ollama_host: Optional[str], ids: Optional[List[str]], use_default: bool
+) -> None:
     host = _resolve_host(ollama_host)
     targets = ids if ids else (DEFAULT_MODELS if use_default else [])
     if not targets:
@@ -177,7 +206,9 @@ def pull_models(ollama_host: Optional[str], ids: Optional[List[str]], use_defaul
         for name in targets:
             console.print(f"Pulling [cyan]{name}[/cyan] @ {host} …")
             try:
-                with client.stream("POST", f"{host}/api/pull", json={"name": name, "stream": True}) as resp:
+                with client.stream(
+                    "POST", f"{host}/api/pull", json={"name": name, "stream": True}
+                ) as resp:
                     resp.raise_for_status()
                     # Try to render a simple progress bar if totals are provided
                     progress = None
@@ -199,7 +230,9 @@ def pull_models(ollama_host: Optional[str], ids: Optional[List[str]], use_defaul
                             if total and completed is not None:
                                 if progress is None:
                                     progress = Progress(
-                                        TextColumn("[progress.description]{task.description}"),
+                                        TextColumn(
+                                            "[progress.description]{task.description}"
+                                        ),
                                         BarColumn(),
                                         TextColumn("{task.percentage:>3.0f}%"),
                                         console=console,
@@ -212,7 +245,9 @@ def pull_models(ollama_host: Optional[str], ids: Optional[List[str]], use_defaul
                             # Terminal condition
                             if status == "success":
                                 if progress is not None:
-                                    progress.update(task_id, completed=progress.tasks[0].total)
+                                    progress.update(
+                                        task_id, completed=progress.tasks[0].total
+                                    )
                                     progress.stop()
                                 console.print("  → done")
                                 break

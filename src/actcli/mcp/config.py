@@ -77,17 +77,17 @@ def save_project_mcp_config(cfg: MCPConfig) -> None:
     lines: list[str] = []
     for name, s in cfg.servers.items():
         lines.append(f"[servers.{name}]")
-        lines.append(f"url = \"{s.url}\"")
+        lines.append(f'url = "{s.url}"')
         lines.append(f"enabled = {str(bool(s.enabled)).lower()}")
         if s.group is not None:
-            lines.append(f"group = \"{s.group}\"")
+            lines.append(f'group = "{s.group}"')
         if s.desc is not None:
-            lines.append(f"desc = \"{s.desc}\"")
+            lines.append(f'desc = "{s.desc}"')
         lines.append(f"log = {str(bool(s.log)).lower()}")
         if s.reload_url is not None:
-            lines.append(f"reload_url = \"{s.reload_url}\"")
+            lines.append(f'reload_url = "{s.reload_url}"')
         if s.restart_cmd is not None:
-            lines.append(f"restart_cmd = \"{s.restart_cmd}\"")
+            lines.append(f'restart_cmd = "{s.restart_cmd}"')
         lines.append("")
     get_project_file().write_text("\n".join(lines), encoding="utf-8")
 

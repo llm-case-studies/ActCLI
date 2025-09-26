@@ -9,20 +9,27 @@ from typer.testing import CliRunner
 class _ClientOK:
     def __init__(self, **kw: Any) -> None:
         pass
+
     def __enter__(self):
         return self
+
     def __exit__(self, exc_type, exc, tb):
         return False
+
     def get(self, url: str):
         # /health
         class R:
             status_code = 200
+
             def json(self):
                 return {"ok": True}
+
         return R()
+
     def head(self, url: str):
         class R:
             status_code = 204
+
         return R()
 
 
@@ -34,6 +41,7 @@ def test_mcp_commands_lifecycle(tmp_path: Path, monkeypatch) -> None:
 
     # Ensure httpx calls in mcp module don't hit the network
     import actcli.commands.mcp as mcp_cmd
+
     monkeypatch.setattr(mcp_cmd.httpx, "Client", _ClientOK)
 
     # Add a server and toggle states

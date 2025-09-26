@@ -6,7 +6,6 @@ from typing import Optional
 import httpx
 
 
-
 class OpenAIAdapter:
     def __init__(self, model: str = "gpt-4o-mini") -> None:
         self.model = model
@@ -29,7 +28,9 @@ class OpenAIAdapter:
             except Exception:
                 pass
         if not self._api_key and not self._oauth_token:
-            raise RuntimeError("OpenAI auth missing (set OPENAI_API_KEY or login with PKCE)")
+            raise RuntimeError(
+                "OpenAI auth missing (set OPENAI_API_KEY or login with PKCE)"
+            )
 
     def generate(
         self,
@@ -49,10 +50,12 @@ class OpenAIAdapter:
             messages.append({"role": "user", "content": prompt})
         else:
             ctx = context_snippets or ""
-            messages.append({
-                "role": "user",
-                "content": f"Original prompt: {prompt}\nPeers said (snippets):\n{ctx}\nCritique/support briefly and propose one next check."
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"Original prompt: {prompt}\nPeers said (snippets):\n{ctx}\nCritique/support briefly and propose one next check.",
+                }
+            )
         payload = {
             "model": self.model,
             "messages": messages,
@@ -69,7 +72,11 @@ class OpenAIAdapter:
         token = self._oauth_token or self._api_key
         headers = {"Authorization": f"Bearer {token}"}
         with httpx.Client(timeout=timeout_s) as client:
-            r = client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            r = client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload,
+            )
             r.raise_for_status()
             data = r.json()
             text = data["choices"][0]["message"]["content"].strip()

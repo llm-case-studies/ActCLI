@@ -21,4 +21,3 @@ def test_policy_allow_deny_and_checks(tmp_path: Path) -> None:
 
     p.allow_write("./out/**")
     assert p.can_write(f_write, root=root)
-

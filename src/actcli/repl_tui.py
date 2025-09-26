@@ -17,32 +17,32 @@ class EnhancedSlashCompleter(Completer):
         # Group commands by category for better UX
         self.commands = sorted(set(commands))
         self.command_descriptions = {
-            '/help': 'Show available commands',
-            '/models': 'Manage AI models',
-            '/models add': 'Add a new model',
-            '/models remove': 'Remove a model',
-            '/rounds': 'Set discussion rounds (1-3)',
-            '/ollama': 'Configure Ollama host',
-            '/save': 'Save transcript and audit',
-            '/trust': 'Manage folder trust settings',
-            '/share': 'Configure cloud sharing',
-            '/mcp': 'Manage MCP servers',
-            '/quit': 'Exit the application',
-            '/?': 'Quick help',
+            "/help": "Show available commands",
+            "/models": "Manage AI models",
+            "/models add": "Add a new model",
+            "/models remove": "Remove a model",
+            "/rounds": "Set discussion rounds (1-3)",
+            "/ollama": "Configure Ollama host",
+            "/save": "Save transcript and audit",
+            "/trust": "Manage folder trust settings",
+            "/share": "Configure cloud sharing",
+            "/mcp": "Manage MCP servers",
+            "/quit": "Exit the application",
+            "/?": "Quick help",
         }
 
     def get_completions(self, document, complete_event):  # type: ignore[override]
         text = document.text_before_cursor.lower()
 
         # If not starting with '/', don't complete
-        if not text.startswith('/'):
+        if not text.startswith("/"):
             return
 
         # Find matching commands
         for cmd in self.commands:
             if cmd.lower().startswith(text):
                 # Calculate the replacement text
-                completion_text = cmd[len(text):]
+                completion_text = cmd[len(text) :]
 
                 # Get description for display
                 description = self.command_descriptions.get(cmd, "")
@@ -51,7 +51,7 @@ class EnhancedSlashCompleter(Completer):
                     completion_text,
                     start_position=0,
                     display=f"{cmd} - {description}" if description else cmd,
-                    style="class:completion"
+                    style="class:completion",
                 )
 
 
@@ -65,25 +65,27 @@ def run_enhanced_tui_repl(commands: List[str], status_callback=None) -> Optional
     bindings = KeyBindings()
 
     # Claude CLI-inspired styling
-    style = Style.from_dict({
-        'completion-menu.completion': 'bg:#003366 #ffffff',
-        'completion-menu.completion.current': 'bg:#00aaaa #000000 bold',
-        'completion': '#888888',
-        'prompt': '#00aaaa bold',
-        'bottom-toolbar': 'bg:#222222 #cccccc',
-        'status': 'bg:#003366 #ffffff',
-    })
+    style = Style.from_dict(
+        {
+            "completion-menu.completion": "bg:#003366 #ffffff",
+            "completion-menu.completion.current": "bg:#00aaaa #000000 bold",
+            "completion": "#888888",
+            "prompt": "#00aaaa bold",
+            "bottom-toolbar": "bg:#222222 #cccccc",
+            "status": "bg:#003366 #ffffff",
+        }
+    )
 
-    @bindings.add('c-d')
+    @bindings.add("c-d")
     def _(event):  # type: ignore
         event.app.exit(result=None)
 
-    @bindings.add('s-enter')  # Shift+Enter for multi-line
+    @bindings.add("s-enter")  # Shift+Enter for multi-line
     def _(event):  # type: ignore
         buf = event.app.current_buffer
-        buf.insert_text('\n')
+        buf.insert_text("\n")
 
-    @bindings.add('tab')  # Enhanced tab completion
+    @bindings.add("tab")  # Enhanced tab completion
     def _(event):  # type: ignore
         buf = event.app.current_buffer
         if buf.complete_state:
@@ -96,27 +98,31 @@ def run_enhanced_tui_repl(commands: List[str], status_callback=None) -> Optional
         completer=completer,
         key_bindings=bindings,
         style=style,
-        complete_style='multi-column',  # Better completion display
+        complete_style="multi-column",  # Better completion display
         mouse_support=True,
         wrap_lines=True,
     )
 
     try:
         # Create Claude CLI-style clean prompt (no visible prompt text)
-        prompt_text = HTML('')
+        prompt_text = HTML("")
 
         # Status-aware bottom toolbar
         if status_callback:
             toolbar_text = status_callback()
         else:
-            toolbar_text = "Type /help for commands • Ctrl+D to quit • Tab for completions"
+            toolbar_text = (
+                "Type /help for commands • Ctrl+D to quit • Tab for completions"
+            )
 
-        bottom_bar = HTML(f'<bottom-toolbar>{toolbar_text}</bottom-toolbar>')
+        bottom_bar = HTML(f"<bottom-toolbar>{toolbar_text}</bottom-toolbar>")
 
         line = session.prompt(
             prompt_text,
             bottom_toolbar=bottom_bar,
-            placeholder=HTML('<class:placeholder>Enter a prompt or /command...</class:placeholder>')
+            placeholder=HTML(
+                "<class:placeholder>Enter a prompt or /command...</class:placeholder>"
+            ),
         )
         return line.strip()
 
@@ -127,4 +133,3 @@ def run_enhanced_tui_repl(commands: List[str], status_callback=None) -> Optional
 def run_tui_input_loop(commands: List[str], *, toolbar: str = "") -> Optional[str]:
     """Legacy function for backward compatibility."""
     return run_enhanced_tui_repl(commands, lambda: toolbar)
-

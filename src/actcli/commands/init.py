@@ -17,9 +17,16 @@ def run_init(ollama_host: Optional[str]) -> None:
     if path.exists():
         console.print(Panel(f"{PROJECT_FILE} already exists.", border_style="yellow"))
         return
-    cfg = Config(project_name=Path.cwd().name, project_version="0.1", defaults=Defaults())
+    cfg = Config(
+        project_name=Path.cwd().name, project_version="0.1", defaults=Defaults()
+    )
     if ollama_host:
         cfg.defaults.ollama_host = ollama_host
     write_project_config(path, cfg)
-    console.print(Panel(f"Created {PROJECT_FILE}\n\nDefaults:\n- models: {cfg.defaults.models}\n- mode: {cfg.defaults.mode}\n- output_dir: {cfg.defaults.output_dir}\n- ollama_host: {cfg.defaults.ollama_host or '(none)'}", title="actcli init", border_style="green"))
-
+    console.print(
+        Panel(
+            f"Created {PROJECT_FILE}\n\nDefaults:\n- models: {cfg.defaults.models}\n- mode: {cfg.defaults.mode}\n- output_dir: {cfg.defaults.output_dir}\n- ollama_host: {cfg.defaults.ollama_host or '(none)'}",
+            title="actcli init",
+            border_style="green",
+        )
+    )

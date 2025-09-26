@@ -14,7 +14,9 @@ def test_set_get_revoke_trust(tmp_path: Path, monkeypatch) -> None:
     root = tmp_path / "proj"
     root.mkdir()
 
-    rec_path = trust_mod.set_trust(root, scope="persist", read=["./**"], write=["./out/**"], cloud_share=True)
+    rec_path = trust_mod.set_trust(
+        root, scope="persist", read=["./**"], write=["./out/**"], cloud_share=True
+    )
     assert rec_path.exists()
 
     rec = trust_mod.get_trust(root)
@@ -25,4 +27,3 @@ def test_set_get_revoke_trust(tmp_path: Path, monkeypatch) -> None:
 
     trust_mod.revoke_trust(root)
     assert not rec_path.exists()
-

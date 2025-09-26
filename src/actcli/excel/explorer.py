@@ -33,7 +33,9 @@ def inspect_workbook(path: str) -> Dict[str, Any]:
     kind = p.suffix.lower().lstrip(".")
 
     keep_vba = kind == "xlsm"
-    wb = load_workbook(filename=str(p), read_only=True, data_only=False, keep_vba=keep_vba)
+    wb = load_workbook(
+        filename=str(p), read_only=True, data_only=False, keep_vba=keep_vba
+    )
 
     # Macro presence (no execution)
     has_macros = bool(getattr(wb, "vba_archive", None))
@@ -95,4 +97,3 @@ def write_report_json(payload: Dict[str, Any], out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return out_path
-

@@ -23,4 +23,3 @@ def test_roundtable_echo_only(tmp_path: Path, monkeypatch) -> None:
     assert md.exists() and audit.exists()
     data = json.loads(audit.read_text())
     assert 0.0 <= data.get("disagreement_score", 0.0) <= 1.0
-

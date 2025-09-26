@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from actcli.config import Config, Defaults, PROJECT_FILE, load_config, write_project_config
+from actcli.config import (
+    Config,
+    Defaults,
+    PROJECT_FILE,
+    load_config,
+    write_project_config,
+)
 
 
 def test_write_and_load_project_config(tmp_path: Path) -> None:
@@ -45,4 +51,3 @@ models = "llama3"
     assert loaded.project_name == "user-proj"
     assert loaded.defaults.mode == "offline"
     assert loaded.defaults.seed == 7
-

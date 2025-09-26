@@ -52,4 +52,3 @@ class CredentialStore:
         if provider in self._cache:
             del self._cache[provider]
             self.save()
-

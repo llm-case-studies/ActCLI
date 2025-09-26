@@ -34,7 +34,10 @@ class LocalGit:
         _, root, _ = _run_git(["rev-parse", "--show-toplevel"], cwd=self.cwd)
         _, branch, _ = _run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=self.cwd)
         # Default branch
-        code, headref, _ = _run_git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], cwd=self.cwd)
+        code, headref, _ = _run_git(
+            ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+            cwd=self.cwd,
+        )
         default_branch = "main"
         if code == 0 and headref:
             # origin/MAIN
@@ -48,7 +51,13 @@ class LocalGit:
             if len(parts) >= 2:
                 name, url = parts[0], parts[1]
                 remotes.setdefault(name, url)
-        return RepoInfo(True, root=root, branch=branch, default_branch=default_branch, remotes=remotes)
+        return RepoInfo(
+            True,
+            root=root,
+            branch=branch,
+            default_branch=default_branch,
+            remotes=remotes,
+        )
 
     def status(self) -> Dict:
         info = self.detect()
@@ -72,7 +81,13 @@ class LocalGit:
             raise ValueError("No paths provided to add")
         _run_git(["add", *paths], cwd=self.cwd)
 
-    def commit(self, message: str, signoff: bool = False, amend: bool = False, allow_empty: bool = False) -> str:
+    def commit(
+        self,
+        message: str,
+        signoff: bool = False,
+        amend: bool = False,
+        allow_empty: bool = False,
+    ) -> str:
         args = ["commit", "-m", message]
         if signoff:
             args.append("-s")
@@ -125,7 +140,9 @@ class LocalGit:
             _run_git(["add", ".gitignore"], cwd=self.cwd)
 
     @staticmethod
-    def pr_url(remote_url: str, target: str, branch: str, title: str = "", body: str = "") -> Optional[str]:
+    def pr_url(
+        remote_url: str, target: str, branch: str, title: str = "", body: str = ""
+    ) -> Optional[str]:
         import urllib.parse as up
 
         def gh(owner_repo: str) -> str:
@@ -164,4 +181,3 @@ class LocalGit:
                 return gl(owner_repo)
             return gitea(host, owner_repo)
         return None
-

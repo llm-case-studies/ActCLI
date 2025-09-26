@@ -11,7 +11,14 @@ from ..mcp.git_client import GitMCPClient
 console = Console()
 
 
-def prepare(message: str, files: Optional[str], branch: Optional[str], target: Optional[str], remote: str, signoff: bool) -> None:
+def prepare(
+    message: str,
+    files: Optional[str],
+    branch: Optional[str],
+    target: Optional[str],
+    remote: str,
+    signoff: bool,
+) -> None:
     client = GitMCPClient()
     info = client.repo_detect()
     if not info.get("is_repo"):
@@ -43,7 +50,9 @@ def prepare(message: str, files: Optional[str], branch: Optional[str], target: O
     if url:
         console.print(Panel(url, title="Create PR", border_style="cyan"))
     else:
-        console.print("[yellow]Pushed. Unable to construct PR URL; check remote configuration.[/yellow]")
+        console.print(
+            "[yellow]Pushed. Unable to construct PR URL; check remote configuration.[/yellow]"
+        )
 
 
 def link(target: Optional[str], remote: str) -> None:
@@ -58,5 +67,6 @@ def link(target: Optional[str], remote: str) -> None:
     if url:
         console.print(Panel(url, title="PR Link", border_style="cyan"))
     else:
-        console.print("[yellow]Unable to construct PR URL; check remote configuration.[/yellow]")
-
+        console.print(
+            "[yellow]Unable to construct PR URL; check remote configuration.[/yellow]"
+        )

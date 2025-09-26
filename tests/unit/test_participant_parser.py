@@ -27,6 +27,7 @@ def test_parse_shortcuts_and_echo_and_default_host() -> None:
     ech = parse_participant_spec("echo2")
     assert ech.provider == "echo" and ech.alias is None
     # Default host applied for ollama
-    ol = parse_participant_spec("ollama:llama3", default_ollama_host="http://127.0.0.1:11435")
+    ol = parse_participant_spec(
+        "ollama:llama3", default_ollama_host="http://127.0.0.1:11435"
+    )
     assert ol.host == "http://127.0.0.1:11435"
-

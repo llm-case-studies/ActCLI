@@ -44,9 +44,13 @@ class ClaudeCLIAdapter:
                 env["CLAUDE_DISABLE_MCP"] = "1"
                 env["MCP_CONFIG"] = ""
                 env["MCP_ENDPOINTS"] = ""
-            test_result = subprocess.run([
-                "claude", "-p", "test", "--output-format", "json"
-            ], capture_output=True, text=True, timeout=10, env=env)
+            test_result = subprocess.run(
+                ["claude", "-p", "test", "--output-format", "json"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
+            )
 
             if test_result.returncode != 0:
                 raise RuntimeError(
@@ -99,21 +103,27 @@ class ClaudeCLIAdapter:
                 env["CLAUDE_DISABLE_MCP"] = "1"
                 env["MCP_CONFIG"] = ""
                 env["MCP_ENDPOINTS"] = ""
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, env=env)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout_s, env=env
+            )
 
             if result.returncode != 0:
-                error_msg = result.stderr.strip() if result.stderr else "Unknown Claude CLI error"
+                error_msg = (
+                    result.stderr.strip()
+                    if result.stderr
+                    else "Unknown Claude CLI error"
+                )
                 raise RuntimeError(f"Claude CLI failed: {error_msg}")
 
             # Parse JSON response
             try:
                 data = json.loads(result.stdout.strip())
                 response_text = (
-                    data.get("result") or
-                    data.get("text") or
-                    data.get("output") or
-                    data.get("content") or
-                    result.stdout.strip()
+                    data.get("result")
+                    or data.get("text")
+                    or data.get("output")
+                    or data.get("content")
+                    or result.stdout.strip()
                 )
                 return str(response_text).strip()
             except json.JSONDecodeError:

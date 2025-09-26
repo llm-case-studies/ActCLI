@@ -14,13 +14,20 @@ from pathlib import Path
 
 # Subcommands are loaded lazily to keep import costs low
 
-app = typer.Typer(name="actcli", add_completion=False, invoke_without_command=True, help="ActCLI — actuarial CLI with multi-model roundtable chat")
+app = typer.Typer(
+    name="actcli",
+    add_completion=False,
+    invoke_without_command=True,
+    help="ActCLI — actuarial CLI with multi-model roundtable chat",
+)
 console = Console()
 _CONFIG, _CONFIG_PATH = load_config()
 
 
 def _status_header() -> str:
-    mode = (_CONFIG.defaults.mode if _CONFIG else os.environ.get("ACTCLI_MODE", "hybrid")).upper()
+    mode = (
+        _CONFIG.defaults.mode if _CONFIG else os.environ.get("ACTCLI_MODE", "hybrid")
+    ).upper()
     return f"ActCLI • chat(roundtable) • MODE: {mode} • v{__version__}"
 
 
@@ -33,6 +40,7 @@ def _first_run_banner_if_needed() -> None:
     console.print(_status_header())
     try:
         from .commands.doctor import build_doctor_lite_panel
+
         console.print(build_doctor_lite_panel())
     except Exception:
         pass
@@ -45,7 +53,10 @@ def _root(ctx: typer.Context):
         # Just go straight to chat - keep it simple!
         console.print(_status_header())
         from .commands.chat import run_chat_repl
-        run_chat_repl(initial_multi="llama3,claude,gpt", rounds=2, timeout_s=25, ollama_host=None)
+
+        run_chat_repl(
+            initial_multi="llama3,claude,gpt", rounds=2, timeout_s=25, ollama_host=None
+        )
 
 
 @app.command()
@@ -68,7 +79,9 @@ def auth(
     action: str = typer.Argument(..., help="login|status|logout"),
     provider: Optional[str] = typer.Argument(None, help="openai|anthropic|google"),
     method: Optional[str] = typer.Option(None, help="api-key|device|pkce"),
-    client_id: Optional[str] = typer.Option(None, "--client-id", help="OAuth client_id (e.g., for Google device flow)"),
+    client_id: Optional[str] = typer.Option(
+        None, "--client-id", help="OAuth client_id (e.g., for Google device flow)"
+    ),
 ) -> None:
     """Authenticate with providers (API keys or device/OAuth where supported)."""
     from .commands.auth import run_auth
@@ -78,16 +91,46 @@ def auth(
 
 @app.command()
 def chat(
-    prompt: str = typer.Option("", "--prompt", "-p", help="User prompt (single turn, otherwise interactive)"),
-    multi: str = typer.Option("llama3,claude,gpt", "--multi", help="Comma-separated provider IDs: llama3, claude, gpt, gemini"),
-    rounds: int = typer.Option(2, "--rounds", min=1, max=3, help="Number of discussion rounds (1-3)"),
+    prompt: str = typer.Option(
+        "", "--prompt", "-p", help="User prompt (single turn, otherwise interactive)"
+    ),
+    multi: str = typer.Option(
+        "llama3,claude,gpt",
+        "--multi",
+        help="Comma-separated provider IDs: llama3, claude, gpt, gemini",
+    ),
+    rounds: int = typer.Option(
+        2, "--rounds", min=1, max=3, help="Number of discussion rounds (1-3)"
+    ),
     timeout_s: int = typer.Option(25, "--timeout-s", help="Per-call timeout seconds"),
-    ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="Override Ollama base URL, e.g., http://127.0.0.1:11435"),
-    save: Optional[str] = typer.Option(None, "--save", help="Save transcript markdown to path (e.g., out/seminar.md)"),
-    audit: Optional[str] = typer.Option(None, "--audit", help="Save audit-lite JSON to path (e.g., out/seminar_audit.json)"),
-    presenter_state: Optional[str] = typer.Option(None, "--presenter-state", help="Write presenter state JSON (e.g., out/presenter/state.json)"),
-    max_rounds: Optional[int] = typer.Option(None, "--max-rounds", help="Cap for unlimited-mode rounds (default unlimited, soft clamp 100)"),
-    round_window: int = typer.Option(2, "--round-window", help="Number of prior rounds to include in context window (default 2)"),
+    ollama_host: Optional[str] = typer.Option(
+        None,
+        "--ollama-host",
+        help="Override Ollama base URL, e.g., http://127.0.0.1:11435",
+    ),
+    save: Optional[str] = typer.Option(
+        None, "--save", help="Save transcript markdown to path (e.g., out/seminar.md)"
+    ),
+    audit: Optional[str] = typer.Option(
+        None,
+        "--audit",
+        help="Save audit-lite JSON to path (e.g., out/seminar_audit.json)",
+    ),
+    presenter_state: Optional[str] = typer.Option(
+        None,
+        "--presenter-state",
+        help="Write presenter state JSON (e.g., out/presenter/state.json)",
+    ),
+    max_rounds: Optional[int] = typer.Option(
+        None,
+        "--max-rounds",
+        help="Cap for unlimited-mode rounds (default unlimited, soft clamp 100)",
+    ),
+    round_window: int = typer.Option(
+        2,
+        "--round-window",
+        help="Number of prior rounds to include in context window (default 2)",
+    ),
 ) -> None:
     """Multi-model chat: interactive by default, or one-shot with --prompt."""
     from .commands.chat import run_roundtable, run_chat_repl
@@ -96,8 +139,16 @@ def chat(
 
     # Simple logic: if prompt given, do one-shot; otherwise interactive
     if prompt:
-        run_roundtable(prompt=prompt, multi=multi, rounds=rounds, timeout_s=timeout_s,
-                      ollama_host=ollama_host, save=save, audit=audit, presenter_state=presenter_state)
+        run_roundtable(
+            prompt=prompt,
+            multi=multi,
+            rounds=rounds,
+            timeout_s=timeout_s,
+            ollama_host=ollama_host,
+            save=save,
+            audit=audit,
+            presenter_state=presenter_state,
+        )
     else:
         # Interactive chat (what most people want)
         run_chat_repl(
@@ -113,11 +164,21 @@ def chat(
 @app.command()
 def models(
     action: str = typer.Argument("list", help="list|pull"),
-    models: Optional[str] = typer.Option(None, "--models", help="Comma-separated model tags to pull"),
-    all: bool = typer.Option(False, "--all", help="Pull a default set of useful models"),
-    provider: str = typer.Option("ollama", "--provider", help="Provider to list (ollama|openai|anthropic|google)"),
-    refresh: bool = typer.Option(False, "--refresh", help="Force refresh cached list (cloud providers)"),
-    ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="Ollama base URL (default http://127.0.0.1:11435)"),
+    models: Optional[str] = typer.Option(
+        None, "--models", help="Comma-separated model tags to pull"
+    ),
+    all: bool = typer.Option(
+        False, "--all", help="Pull a default set of useful models"
+    ),
+    provider: str = typer.Option(
+        "ollama", "--provider", help="Provider to list (ollama|openai|anthropic|google)"
+    ),
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Force refresh cached list (cloud providers)"
+    ),
+    ollama_host: Optional[str] = typer.Option(
+        None, "--ollama-host", help="Ollama base URL (default http://127.0.0.1:11435)"
+    ),
 ) -> None:
     """List or pull models (ollama) and show provider listings."""
     from .commands.models import list_models, pull_models, list_provider_models
@@ -138,12 +199,22 @@ def models(
 @app.command()
 def pr(
     action: str = typer.Argument(..., help="prepare|link"),
-    message: Optional[str] = typer.Option(None, "-m", "--message", help="Commit message (for prepare)"),
-    files: Optional[str] = typer.Option(None, "--files", help="Comma-separated globs to stage (for prepare)"),
-    branch: Optional[str] = typer.Option(None, "--branch", help="Feature branch name (for prepare)"),
-    target: Optional[str] = typer.Option(None, "--target", help="Target branch, defaults to repo default"),
+    message: Optional[str] = typer.Option(
+        None, "-m", "--message", help="Commit message (for prepare)"
+    ),
+    files: Optional[str] = typer.Option(
+        None, "--files", help="Comma-separated globs to stage (for prepare)"
+    ),
+    branch: Optional[str] = typer.Option(
+        None, "--branch", help="Feature branch name (for prepare)"
+    ),
+    target: Optional[str] = typer.Option(
+        None, "--target", help="Target branch, defaults to repo default"
+    ),
     remote: str = typer.Option("origin", "--remote", help="Remote name"),
-    signoff: bool = typer.Option(False, "--signoff", help="Add Signed-off-by to commit"),
+    signoff: bool = typer.Option(
+        False, "--signoff", help="Add Signed-off-by to commit"
+    ),
 ) -> None:
     """Prepare a PR (commit+push+URL) or print the PR link for the current branch."""
     from .commands.pr import prepare as pr_prepare, link as pr_link
@@ -151,7 +222,14 @@ def pr(
     if action == "prepare":
         if not message:
             raise SystemExit("--message is required for prepare")
-        pr_prepare(message=message, files=files, branch=branch, target=target, remote=remote, signoff=signoff)
+        pr_prepare(
+            message=message,
+            files=files,
+            branch=branch,
+            target=target,
+            remote=remote,
+            signoff=signoff,
+        )
     elif action == "link":
         pr_link(target=target, remote=remote)
     else:
@@ -159,7 +237,11 @@ def pr(
 
 
 @app.command()
-def init(ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="Write actcli.toml with this Ollama host")) -> None:
+def init(
+    ollama_host: Optional[str] = typer.Option(
+        None, "--ollama-host", help="Write actcli.toml with this Ollama host"
+    ),
+) -> None:
     """Create actcli.toml with defaults in the current directory."""
     from .commands.init import run_init
 
@@ -168,15 +250,29 @@ def init(ollama_host: Optional[str] = typer.Option(None, "--ollama-host", help="
 
 @app.command()
 def mcp(
-    action: str = typer.Argument("list", help="list|add|on|off|test|log|reload|restart"),
-    name: Optional[str] = typer.Argument(None, help="Server name for actions that require it"),
+    action: str = typer.Argument(
+        "list", help="list|add|on|off|test|log|reload|restart"
+    ),
+    name: Optional[str] = typer.Argument(
+        None, help="Server name for actions that require it"
+    ),
     url: Optional[str] = typer.Option(None, "--url", help="Server URL (for add)"),
     group: Optional[str] = typer.Option(None, "--group", help="Group label (for add)"),
     desc: Optional[str] = typer.Option(None, "--desc", help="Description (for add)"),
-    enable: Optional[bool] = typer.Option(None, "--enable", help="Enable/disable (for log)"),
+    enable: Optional[bool] = typer.Option(
+        None, "--enable", help="Enable/disable (for log)"
+    ),
 ) -> None:
     """Manage MCP servers: list/add/on/off/test/log/reload/restart."""
-    from .commands.mcp import mcp_list, mcp_add, mcp_on_off, mcp_log, mcp_test, mcp_reload, mcp_restart
+    from .commands.mcp import (
+        mcp_list,
+        mcp_add,
+        mcp_on_off,
+        mcp_log,
+        mcp_test,
+        mcp_reload,
+        mcp_restart,
+    )
 
     if action == "list":
         mcp_list()
@@ -215,7 +311,9 @@ def mcp(
 @app.command()
 def providers(
     action: str = typer.Argument("doctor", help="doctor|login"),
-    provider: Optional[str] = typer.Argument(None, help="codex_cli|claude_cli (for login)"),
+    provider: Optional[str] = typer.Argument(
+        None, help="codex_cli|claude_cli (for login)"
+    ),
 ) -> None:
     """Inspect CLI-backed providers or launch their login flows."""
     from .commands.providers import providers_doctor
@@ -259,7 +357,9 @@ def server(
     reload: bool = typer.Option(True, "--reload/--no-reload"),
     with_ui: bool = typer.Option(True, "--with-ui/--no-ui"),
     tail: bool = typer.Option(False, "--tail", help="Tail logs (for logs action)"),
-    force: bool = typer.Option(False, "--force", help="On start: stop any prior pid and clean stale pid file"),
+    force: bool = typer.Option(
+        False, "--force", help="On start: stop any prior pid and clean stale pid file"
+    ),
 ) -> None:
     """Control the Semhost server (FastAPI)."""
     from .commands.server import server_start, server_status, server_stop, server_logs
@@ -282,10 +382,15 @@ def server(
 @app.command()
 def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> None:
     """Manage the SPA (dev server/build). Single, predictable port (5173)."""
-    import shutil, subprocess, os, signal, time
+    import shutil
+    import subprocess
+    import os
+    import signal
+    import time
     from pathlib import Path as _P
 
-    OUT = _P("out"); OUT.mkdir(parents=True, exist_ok=True)
+    OUT = _P("out")
+    OUT.mkdir(parents=True, exist_ok=True)
     PID = OUT / "spa.pid"
     LOG = OUT / "spa.log"
 
@@ -309,7 +414,8 @@ def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> N
         console.print("SPA: stopped.")
 
     if action == "stop":
-        _stop(); return
+        _stop()
+        return
 
     if action == "dev":
         if not shutil.which("npm"):
@@ -318,13 +424,19 @@ def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> N
         if PID.exists():
             _stop()
         with LOG.open("ab", buffering=0) as log:
-            p = subprocess.Popen(["npm", "run", "dev", "--prefix", "studio"], stdout=log, stderr=log)
+            p = subprocess.Popen(
+                ["npm", "run", "dev", "--prefix", "studio"], stdout=log, stderr=log
+            )
         PID.write_text(str(p.pid), encoding="utf-8")
-        console.print("SPA dev server starting at http://127.0.0.1:5173 (logs: out/spa.log)")
+        console.print(
+            "SPA dev server starting at http://127.0.0.1:5173 (logs: out/spa.log)"
+        )
     elif action == "build":
         if not shutil.which("npm"):
             raise SystemExit("npm not found; install Node.js to build SPA")
-        subprocess.check_call(["npm", "run", "build", "--prefix", "studio"])  # blocking build
+        subprocess.check_call(
+            ["npm", "run", "build", "--prefix", "studio"]
+        )  # blocking build
         console.print("Built SPA to studio/dist. Semhost will serve it at /ui.")
     elif action == "preview":
         if not shutil.which("npm"):
@@ -333,9 +445,13 @@ def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> N
         if PID.exists():
             _stop()
         with LOG.open("ab", buffering=0) as log:
-            p = subprocess.Popen(["npm", "run", "preview", "--prefix", "studio"], stdout=log, stderr=log)
+            p = subprocess.Popen(
+                ["npm", "run", "preview", "--prefix", "studio"], stdout=log, stderr=log
+            )
         PID.write_text(str(p.pid), encoding="utf-8")
-        console.print("SPA preview server starting (defaults to 5173). Logs: out/spa.log")
+        console.print(
+            "SPA preview server starting (defaults to 5173). Logs: out/spa.log"
+        )
     else:
         raise SystemExit("Unknown action. Use: dev|build|preview|stop")
 
@@ -344,13 +460,20 @@ def spa(action: str = typer.Argument("dev", help="dev|build|preview|stop")) -> N
 def excel(
     action: str = typer.Argument("explore", help="explore"),
     workbook: str = typer.Argument(..., help="Path to .xlsx/.xlsm (no execution)"),
-    out: Optional[str] = typer.Option(None, "--out", help="Write JSON report to path (e.g., out/excel/explorer.json)"),
+    out: Optional[str] = typer.Option(
+        None, "--out", help="Write JSON report to path (e.g., out/excel/explorer.json)"
+    ),
 ) -> None:
     """Excel Explorer — inspect workbooks safely without executing macros."""
     if action != "explore":
         raise SystemExit("Unknown action. Use: explore")
     try:
-        from .excel.explorer import inspect_workbook, write_report_json, ExcelDepsMissing
+        from .excel.explorer import (
+            inspect_workbook,
+            write_report_json,
+            ExcelDepsMissing,
+        )
+
         payload = inspect_workbook(workbook)
         if out:
             out_path = Path(out)
@@ -364,6 +487,7 @@ def excel(
     except FileNotFoundError:
         console.print(f"[red]Workbook not found: {workbook}[/red]")
         raise SystemExit(2)
+
 
 def main() -> None:
     app()

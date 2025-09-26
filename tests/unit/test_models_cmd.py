@@ -8,7 +8,12 @@ from actcli.commands import models as models_cmd
 
 
 class _FakeResp:
-    def __init__(self, json_data: Dict | None = None, status_code: int = 200, lines: Optional[List[str]] = None) -> None:
+    def __init__(
+        self,
+        json_data: Dict | None = None,
+        status_code: int = 200,
+        lines: Optional[List[str]] = None,
+    ) -> None:
         self._json = json_data or {}
         self.status_code = status_code
         self._lines = lines or []
@@ -24,20 +29,25 @@ class _FakeResp:
     # Streaming context manager API
     def __enter__(self):
         return self
+
     def __exit__(self, exc_type, exc, tb):
         return False
+
     def iter_lines(self) -> Iterable[str]:
         for ln in self._lines:
             yield ln
 
 
 class _FakeClient:
-    def __init__(self, *, tags_json: Dict, pull_lines: Optional[List[str]] = None) -> None:
+    def __init__(
+        self, *, tags_json: Dict, pull_lines: Optional[List[str]] = None
+    ) -> None:
         self._tags_json = tags_json
         self._pull_lines = pull_lines or []
 
     def __enter__(self):
         return self
+
     def __exit__(self, exc_type, exc, tb):
         return False
 
@@ -71,4 +81,3 @@ def test_pull_models_stream_progress(monkeypatch, capsys) -> None:
     models_cmd.pull_models("http://host", ["llama3:8b"], use_default=False)
     out = capsys.readouterr().out
     assert "Pulling" in out
-

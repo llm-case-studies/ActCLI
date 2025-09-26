@@ -44,4 +44,3 @@ def apply_mood(params: Dict[str, object], mood: MoodPreset) -> Dict[str, object]
         sys0 = str(out.get("system", ""))
         out["system"] = (sys0 + "\n" + mood.system).strip() if sys0 else mood.system
     return out
-

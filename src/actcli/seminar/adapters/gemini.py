@@ -6,6 +6,7 @@ from typing import Optional
 import google.generativeai as genai
 from google.oauth2.credentials import Credentials
 
+
 class GeminiAdapter:
     def __init__(self, model: str = "gemini-pro") -> None:
         self.model = model
@@ -17,6 +18,7 @@ class GeminiAdapter:
 
         try:
             from ..auth.store import CredentialStore
+
             store = CredentialStore()
             cred = store.get("google_oauth")
             if cred:
@@ -38,8 +40,10 @@ class GeminiAdapter:
             # Try Application Default Credentials (from gcloud auth or actcli auth login google)
             try:
                 genai.configure()  # Uses ADC automatically
-            except Exception as e:
-                raise RuntimeError(f"Gemini auth missing. Please run: actcli auth login google")
+            except Exception:
+                raise RuntimeError(
+                    "Gemini auth missing. Please run: actcli auth login google"
+                )
 
     def generate(
         self,
@@ -61,7 +65,9 @@ class GeminiAdapter:
             contents = [prompt]
         else:
             ctx = context_snippets or ""
-            contents = [f"Original prompt: {prompt}\nPeers said (snippets):\n{ctx}\nCritique/support briefly and propose one next check."]
+            contents = [
+                f"Original prompt: {prompt}\nPeers said (snippets):\n{ctx}\nCritique/support briefly and propose one next check."
+            ]
 
         if system:
             model.system_instruction = system

@@ -40,7 +40,9 @@ class SessionState:
     round_idx: int = 0
     max_rounds: Optional[int] = None
     window_k: int = 2
-    participants: Dict[str, ModelAdapter] = field(default_factory=dict)  # alias -> adapter (BoundAdapter allowed)
+    participants: Dict[str, ModelAdapter] = field(
+        default_factory=dict
+    )  # alias -> adapter (BoundAdapter allowed)
     history: List[RoundRecord] = field(default_factory=list)
 
 
@@ -56,7 +58,12 @@ class RoundOrchestrator:
     """
 
     def __init__(self, *, window_k: int = 2, max_rounds: Optional[int] = None) -> None:
-        self.state = SessionState(id=str(uuid.uuid4())[:8], started_at=time.time(), window_k=window_k, max_rounds=max_rounds)
+        self.state = SessionState(
+            id=str(uuid.uuid4())[:8],
+            started_at=time.time(),
+            window_k=window_k,
+            max_rounds=max_rounds,
+        )
         self._focused: Optional[Sequence[str]] = None  # one‑shot focus list
 
     def set_participants(self, participants: Dict[str, ModelAdapter]) -> None:
@@ -87,7 +94,9 @@ class RoundOrchestrator:
         if self.state.max_rounds and self.state.round_idx >= self.state.max_rounds:
             return self.state.round_idx
         self.state.round_idx += 1
-        self.state.history.append(RoundRecord(index=self.state.round_idx, started_at=time.time()))
+        self.state.history.append(
+            RoundRecord(index=self.state.round_idx, started_at=time.time())
+        )
         # Clear one‑shot focus
         self._focused = None
         return self.state.round_idx
@@ -110,7 +119,9 @@ class RoundOrchestrator:
         return "\n".join(lines)
 
     # Execution entrypoint (signature only — implementation to be filled by Codex‑J)
-    def run_current_round(self, *, prompt: str, seed: Optional[int], timeout_s: int) -> RoundRecord:
+    def run_current_round(
+        self, *, prompt: str, seed: Optional[int], timeout_s: int
+    ) -> RoundRecord:
         """Fan‑out to participants concurrently and collect entries into current RoundRecord.
 
         - Uses windowed context from build_context()
@@ -202,7 +213,9 @@ class RoundOrchestrator:
                 "window_k": self.state.window_k,
                 "participants": list(self.state.participants.keys()),
             }
-            (root / "session.json").write_text(json.dumps(session_payload, indent=2), encoding="utf-8")
+            (root / "session.json").write_text(
+                json.dumps(session_payload, indent=2), encoding="utf-8"
+            )
             # Round payload
             cur = self._current_round()
             if cur is not None:
@@ -213,7 +226,9 @@ class RoundOrchestrator:
                     "entries": [asdict(e) for e in cur.entries],
                     "synopsis": cur.synopsis,
                 }
-                (root / f"round-{cur.index}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                (root / f"round-{cur.index}.json").write_text(
+                    json.dumps(payload, indent=2), encoding="utf-8"
+                )
         except Exception:
             # Persistence is best-effort
             pass

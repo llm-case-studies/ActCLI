@@ -23,9 +23,22 @@ def write_transcript_md(
     results: List[TurnResult],
     synthesis: Optional[str] = None,
 ) -> None:
-    lines = ["# ActCLI Roundtable", "", f"> {header}", "", "## Prompt", "", f"{prompt}", "", "## Responses", ""]
+    lines = [
+        "# ActCLI Roundtable",
+        "",
+        f"> {header}",
+        "",
+        "## Prompt",
+        "",
+        f"{prompt}",
+        "",
+        "## Responses",
+        "",
+    ]
     for r in results:
-        lines.append(f"### {r.info.name} ({'local' if r.info.is_local else 'cloud'}) — {r.latency_ms} ms")
+        lines.append(
+            f"### {r.info.name} ({'local' if r.info.is_local else 'cloud'}) — {r.latency_ms} ms"
+        )
         lines.append("")
         if r.text:
             lines.append(r.text)
@@ -46,10 +59,11 @@ def write_audit_json(
 ) -> None:
     data = {
         "actcli_version": "0.0.1",
-        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "prompt_len": len(prompt or ""),
         "participants": [
-            {"id": r.info.id, "local": r.info.is_local, "version": r.info.model_version} for r in results
+            {"id": r.info.id, "local": r.info.is_local, "version": r.info.model_version}
+            for r in results
         ],
         "responses": [
             {
@@ -66,9 +80,16 @@ def write_audit_json(
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-def write_presenter_state(path: Path, *, prompt: str, results: List[TurnResult], synthesis: Optional[str], disagreement: Optional[float]) -> None:
+def write_presenter_state(
+    path: Path,
+    *,
+    prompt: str,
+    results: List[TurnResult],
+    synthesis: Optional[str],
+    disagreement: Optional[float],
+) -> None:
     payload = {
-        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "prompt": prompt,
         "results": [
             {
