@@ -1,0 +1,27 @@
+{
+  "name": "ActCLI Web Chat Bridge",
+  "description": "General-purpose human collaboration bridge for ActCLI seminars. Experimental, ToS-aware.",
+  "manifest_version": 3,
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "src/ui/popup.html",
+    "default_title": "ActCLI Web Bridge"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "http://localhost:7530/*",
+    "http://127.0.0.1:7530/*"
+  ],
+  "background": {
+    "service_worker": "src/background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/overlay.js", "src/content/index.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ]
+}
