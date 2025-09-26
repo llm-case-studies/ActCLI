@@ -1,0 +1,10 @@
+{
+  "type": "turn_result",
+  "session_id": "s",
+  "index": 1,
+  "alias": "p",
+  "ok": true,
+  "latency_ms": 0,
+  "text": null,
+  "error": null
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -11,6 +11,12 @@ class SemhostSettings(BaseSettings):
 
     Sprint 1 focuses on app config and CORS.
     """
+
+    model_config = ConfigDict(
+        extra='ignore',
+        env_file=None,  # Don't load .env files by default
+        validate_default=True
+    )
 
     bind_host: str = Field(default="127.0.0.1", alias="SEMHOST_BIND")
     bind_port: int = Field(default=7530, alias="SEMHOST_PORT")
@@ -42,6 +48,10 @@ class SemhostSettings(BaseSettings):
 
     # Persistence
     db_path: str = Field(default="out/semhost.db", alias="SEMHOST_DB_PATH")
+
+    # Logging
+    log_level: str = Field(default="INFO", alias="SEMHOST_LOG_LEVEL")
+    log_json: bool = Field(default=True, alias="SEMHOST_LOG_JSON")
 
     @field_validator("cors_origins", mode="before")
     @classmethod

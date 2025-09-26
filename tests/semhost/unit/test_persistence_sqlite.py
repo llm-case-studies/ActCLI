@@ -11,7 +11,10 @@ from semhost.settings import SemhostSettings
 
 
 def _client(db_path: str) -> TestClient:
-    app = create_app(SemhostSettings(db_path=db_path))
+    # Reset the global connection to pick up new settings
+    from semhost.services import persistence
+    persistence._reset_connection()
+    app = create_app(SemhostSettings(SEMHOST_DB_PATH=db_path))
     return TestClient(app)
 
 

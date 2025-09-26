@@ -12,12 +12,21 @@ _LOCK = threading.Lock()
 _CONN: Optional[sqlite3.Connection] = None
 
 
+def _reset_connection() -> None:
+    """Reset the global connection (for testing only)."""
+    global _CONN
+    with _LOCK:
+        if _CONN is not None:
+            _CONN.close()
+            _CONN = None
+
+
 def _get_conn() -> sqlite3.Connection:
     global _CONN
     if _CONN is not None:
         return _CONN
     st = get_settings()
-    db_path = getattr(st, "db_path", "out/semhost.db")
+    db_path = st.db_path
     # Ensure parent exists
     os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
     conn = sqlite3.connect(db_path, check_same_thread=False)

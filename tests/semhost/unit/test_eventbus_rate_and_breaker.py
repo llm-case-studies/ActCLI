@@ -4,6 +4,7 @@ import time
 
 from semhost.events import EventBus
 import semhost.events as events_mod
+import semhost.deps as deps_mod
 from semhost.settings import SemhostSettings
 
 
@@ -19,8 +20,8 @@ class _FailWS:
 
 def test_allow_connect_rate_limited(monkeypatch) -> None:
     # Force strict limits
-    st = SemhostSettings(ws_connects_per_minute_limit=2)
-    monkeypatch.setattr(events_mod, "get_settings", lambda: st)
+    st = SemhostSettings(SEMHOST_WS_CONNS_PER_MIN=2)
+    monkeypatch.setattr(deps_mod, "get_settings", lambda: st)
     bus = EventBus()
     ok, _ = bus.allow_connect("s1")
     assert ok is True
@@ -31,8 +32,8 @@ def test_allow_connect_rate_limited(monkeypatch) -> None:
 
 
 def test_emit_trips_circuit_breaker_and_cooldown(monkeypatch) -> None:
-    st = SemhostSettings(ws_fail_threshold=2, ws_cooldown_s=1)
-    monkeypatch.setattr(events_mod, "get_settings", lambda: st)
+    st = SemhostSettings(SEMHOST_WS_FAIL_THRESHOLD=2, SEMHOST_WS_COOLDOWN_S=1)
+    monkeypatch.setattr(deps_mod, "get_settings", lambda: st)
     bus = EventBus()
     # Inject failing websocket
     bus._subs["s2"] = events_mod._Subs(sockets={_FailWS(3)})  # type: ignore[arg-type]

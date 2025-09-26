@@ -28,7 +28,7 @@ class EventBus:
         Returns (allowed, reason_if_denied).
         """
         st = get_settings()
-        limit = max(1, int(getattr(st, "ws_connects_per_minute_limit", 120)))
+        limit = max(1, int(st.ws_connects_per_minute_limit))
         now = time.time()
         window = self._conn_attempts.get(session_id, [])
         window = [t for t in window if now - t < 60.0]
@@ -76,8 +76,8 @@ class EventBus:
             except Exception:
                 dead.add(ws)
                 st = get_settings()
-                threshold = max(1, int(getattr(st, "ws_fail_threshold", 50)))
-                cooldown = max(1, int(getattr(st, "ws_cooldown_s", 10)))
+                threshold = max(1, int(st.ws_fail_threshold))
+                cooldown = max(1, int(st.ws_cooldown_s))
                 cnt = 1 + int(self._fail_counts.get(session_id, 0))
                 if cnt >= threshold:
                     self._tripped_until[session_id] = now + float(cooldown)

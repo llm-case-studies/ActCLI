@@ -24,6 +24,7 @@ from ..services.orchestrator_service import OrchestratorRegistry, build_adapters
 from ..events import get_event_bus
 from ..services import persistence as persistence_service
 from ..errors import NotFoundError, BadRequestError
+from ..logging import get_logger
 
 
 router = APIRouter()
@@ -49,6 +50,15 @@ async def create_session_route(req: SessionCreate) -> Dict[str, str]:
     await bus.emit(wrapper.orchestrator.state.id, "session_start", {"round_idx": 0})
     # Persist initial session metadata (best-effort)
     try:
+        get_logger().info(
+            "session_created",
+            extra={
+                "session_id": wrapper.orchestrator.state.id,
+                "window_k": window_k,
+                "max_rounds": req.max_rounds,
+                "participants": len(meta),
+            },
+        )
         snap = wrapper.to_snapshot()
         persistence_service.upsert_session(
             session_id=snap.id,
@@ -115,6 +125,14 @@ async def patch_session_route(session_id: str, patch: SessionPatch) -> SessionSn
         wrapper.orchestrator.state.max_rounds = patch.max_rounds
     # Persist updated session metadata (best-effort)
     try:
+        get_logger().info(
+            "session_patched",
+            extra={
+                "session_id": session_id,
+                "window_k": wrapper.orchestrator.state.window_k,
+                "max_rounds": wrapper.orchestrator.state.max_rounds,
+            },
+        )
         snap = wrapper.to_snapshot()
         persistence_service.upsert_session(
             session_id=snap.id,
@@ -153,6 +171,14 @@ async def round_start_route(session_id: str, req: RoundStartRequest) -> RoundRec
         session_id=session_id, index=wrapper.orchestrator.state.round_idx, prompt=prompt
     )
     await bus.emit(session_id, evt_start.type, evt_start.model_dump())
+    get_logger().info(
+        "round_start",
+        extra={
+            "session_id": session_id,
+            "round_index": wrapper.orchestrator.state.round_idx,
+            "focus": ",".join(focus or []) if focus else None,
+        },
+    )
     rr = await asyncio.to_thread(
         wrapper.orchestrator.run_current_round,
         prompt=prompt,
@@ -177,6 +203,7 @@ async def round_start_route(session_id: str, req: RoundStartRequest) -> RoundRec
     await bus.emit(session_id, evt_saved.type, evt_saved.model_dump())
     # Persist round and session snapshot (best-effort)
     try:
+        get_logger().info("round_end", extra={"session_id": session_id, "round_index": rr.index})
         snap = wrapper.to_snapshot()
         persistence_service.upsert_session(
             session_id=snap.id,
@@ -221,6 +248,14 @@ async def round_next_route(
     bus = get_event_bus()
     evt_start = RoundStartEvent(session_id=session_id, index=next_idx, prompt=prompt)
     await bus.emit(session_id, evt_start.type, evt_start.model_dump())
+    get_logger().info(
+        "round_start",
+        extra={
+            "session_id": session_id,
+            "round_index": next_idx,
+            "focus": ",".join(focus or []) if focus else None,
+        },
+    )
     rr = await asyncio.to_thread(
         wrapper.orchestrator.run_current_round,
         prompt=prompt,
@@ -244,6 +279,7 @@ async def round_next_route(
     await bus.emit(session_id, evt_saved.type, evt_saved.model_dump())
     # Persist round and session snapshot (best-effort)
     try:
+        get_logger().info("round_end", extra={"session_id": session_id, "round_index": rr.index})
         snap = wrapper.to_snapshot()
         persistence_service.upsert_session(
             session_id=snap.id,

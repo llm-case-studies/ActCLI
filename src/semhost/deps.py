@@ -39,6 +39,12 @@ def update_status(patch: StatusPatch) -> Status:
     return _STATUS
 
 
+def set_settings(settings: SemhostSettings) -> None:
+    """Override the global settings (for testing or app initialization)."""
+    global _SETTINGS
+    _SETTINGS = settings
+
+
 def reset_status() -> None:
     global _STATUS
     _STATUS = Status(

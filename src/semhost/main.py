@@ -25,12 +25,25 @@ from .routers import discovery as discovery_router
 from .routers import fs as fs_router
 from .routers import mcp_transport as mcp_transport_router
 from .errors import register_exception_handlers
+from .logging import setup_logging, RequestContextMiddleware
 from .services import persistence as persistence_service
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
+    from .deps import set_settings
     st = settings or get_default_settings()
+    if settings is not None:
+        # Override global settings for app and all dependencies
+        set_settings(settings)
     app = FastAPI(title="ActCLI Semhost", version="1.0.0")
+
+    # Logging setup (JSON by default)
+    try:
+        setup_logging(level=st.log_level, json_enabled=bool(st.log_json))
+        app.add_middleware(RequestContextMiddleware)
+    except Exception:
+        # Logging failures should not block app startup
+        pass
 
     # Extend PATH for vendor CLIs if configured
     if st.cli_paths:
