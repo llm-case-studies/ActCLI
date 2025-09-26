@@ -26,6 +26,10 @@ Playground
   - `playground/virtualized.html`
   - `playground/iframe.html`
 
+Selector Engine Tests (A2)
+- Open `tests/selectors.spec.html` in a browser. The page reports PASS/FAIL for core heuristics.
+- No dependencies; runs entirely client-side.
+
 Notes
 - This is plain JS/HTML; no bundler required. Keep permissions minimal.
 - The code intentionally avoids background automation and respects human-paced usage.

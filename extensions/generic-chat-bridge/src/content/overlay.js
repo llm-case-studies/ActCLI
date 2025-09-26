@@ -94,7 +94,15 @@ class PickerOverlay {
     ev.stopPropagation();
     ev.preventDefault();
     const el = this._lastTarget || ev.target;
-    const sel = computeSelector(el);
+    // Prefer shared selector engine if available
+    const kind = this._stage; // 'input' | 'send' | 'history'
+    let sel = null;
+    try {
+      if (window.__actcliSelectors?.pickBestSelector) {
+        sel = window.__actcliSelectors.pickBestSelector(el, kind);
+      }
+    } catch {}
+    if (!sel) sel = computeSelector(el);
     const role = el.getAttribute('role') || '';
     let nextStage = null;
     if (this._stage === 'input') nextStage = 'send';
