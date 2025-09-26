@@ -10,3 +10,9 @@ experiments/oauth-playground/client_secret.json
 .env
 .env.local
 .env.*
+
+# Playwright E2E test artifacts
+extensions/*/tests/e2e/node_modules/
+extensions/*/tests/e2e/package-lock.json
+extensions/*/tests/e2e/test-results/
+extensions/*/tests/e2e/.pw-chrome-*

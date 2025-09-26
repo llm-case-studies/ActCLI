@@ -16,8 +16,27 @@ What Tests Do
 - Use debug API exposed by content script to Pick and Validate
 - Assert message appended to history
 
+Suggested Additional Specs (included)
+- `virtualized.spec.ts` — validate against virtualized history with scrolling
+- `iframe.spec.ts` — run inside a same-origin iframe using frameLocator
+- `persistence.spec.ts` — confirm profile persistence across reload
+- `mutation-relearn.spec.ts` — break a selector, expect failure, re-learn, then succeed
+
 Notes
 - Tests use a persistent context to allow MV3 extension loading.
 - Popup not used; we drive content script helper `window.__actcli_bridge`.
 - For virtualized/iframe cases, copy/extend the existing test patterns.
 
+Troubleshooting (PW)
+- Extension not loading / globals undefined:
+  - Ensure `EXTENSION_PATH` is an absolute path to the extension root that contains `manifest.json`.
+  - Example (Linux/macOS): `export EXTENSION_PATH=$(realpath ../../)`
+- Using file:// instead of http://:
+  - Serve the Playground via HTTP: `python -m http.server 4400` and use `http://127.0.0.1:4400`.
+- Race on content scripts:
+  - Tests already wait for `window.__actcli_bridge`; if needed, bump timeouts:
+    - One‑liner: `npx playwright test -c playwright.config.ts --timeout=60000`
+- Stale Chrome profile:
+  - Remove `.pw-chrome-profile*` folders in this directory and re‑run tests.
+- Service worker/background errors:
+  - Open `chrome://extensions`, click the extension → “Errors” to inspect logs.

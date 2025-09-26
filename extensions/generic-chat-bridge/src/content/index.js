@@ -1,6 +1,5 @@
 // overlay.js injects globals in content-script context
-const _overlay = window.__actcliOverlay;
-const computeSelector = window.__actcliComputeSelector;
+// Use dynamic access to avoid reference errors during injection
 
 let currentProfile = null; // { input, send, history }
 let runningObserver = null;
@@ -52,7 +51,16 @@ async function validateTextInternal(text) {
     inputEl.focus();
     const before = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
     inputEl.dispatchEvent(before);
-    if ('value' in inputEl) { inputEl.value = (inputEl.value || '') + text; }
+
+    // Handle both regular inputs (with value) and contenteditable elements
+    if ('value' in inputEl) {
+      inputEl.value = (inputEl.value || '') + text;
+    } else if (inputEl.isContentEditable) {
+      inputEl.innerText = (inputEl.innerText || '') + text;
+    } else {
+      inputEl.textContent = (inputEl.textContent || '') + text;
+    }
+
     const after = new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
     inputEl.dispatchEvent(after);
   } catch (e) {
@@ -89,7 +97,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg?.type === 'content.picker.start') {
       // reset and start picking
       currentProfile = null;
-      _overlay.start();
+      window.__actcliOverlay?.start();
       sendResponse({ ok: true });
       return;
     }
@@ -115,9 +123,39 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
-// Expose a basic API for manual debugging (in console)
-window.__actcli_bridge = {
-  computeSelector,
-  pick: () => _overlay.start(),
-  validate: (text) => validateTextInternal(text),
-};
+// Create a bridge to communicate between ISOLATED (this) and MAIN (overlay) worlds
+function createCrossBridge() {
+  // Listen for messages from the main world
+  window.addEventListener('message', async (event) => {
+    if (event.source !== window || !event.data || event.data.source !== '__actcli_main_to_isolated') {
+      return;
+    }
+
+    const { method, params, id } = event.data;
+
+    try {
+      let result;
+      if (method === 'validate') {
+        result = await validateTextInternal(params.text);
+      } else {
+        result = { ok: false, error: 'unknown-method' };
+      }
+
+      // Send response back to main world
+      window.postMessage({
+        source: '__actcli_isolated_to_main',
+        id,
+        result
+      }, '*');
+    } catch (error) {
+      window.postMessage({
+        source: '__actcli_isolated_to_main',
+        id,
+        error: error.message
+      }, '*');
+    }
+  });
+}
+
+// Set up the bridge between isolated and main worlds
+createCrossBridge();
