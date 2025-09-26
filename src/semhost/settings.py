@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -11,6 +11,12 @@ class SemhostSettings(BaseSettings):
 
     Sprint 1 focuses on app config and CORS.
     """
+
+    model_config = ConfigDict(
+        extra='ignore',
+        env_file=None,  # Don't load .env files by default
+        validate_default=True
+    )
 
     bind_host: str = Field(default="127.0.0.1", alias="SEMHOST_BIND")
     bind_port: int = Field(default=7530, alias="SEMHOST_PORT")
@@ -33,13 +39,31 @@ class SemhostSettings(BaseSettings):
     # Disable vendor CLI MCP/tools globally (best-effort)
     cli_disable_tools: bool = Field(default=True, alias="SEMHOST_CLI_DISABLE_TOOLS")
 
+    # WebSocket stability controls (rate-limit + circuit breaker)
+    ws_connects_per_minute_limit: int = Field(
+        default=120, alias="SEMHOST_WS_CONNS_PER_MIN"
+    )
+    ws_fail_threshold: int = Field(default=50, alias="SEMHOST_WS_FAIL_THRESHOLD")
+    ws_cooldown_s: int = Field(default=10, alias="SEMHOST_WS_COOLDOWN_S")
+
+    # Persistence
+    db_path: str = Field(default="out/semhost.db", alias="SEMHOST_DB_PATH")
+
+    # Logging
+    log_level: str = Field(default="INFO", alias="SEMHOST_LOG_LEVEL")
+    log_json: bool = Field(default=True, alias="SEMHOST_LOG_JSON")
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _parse_origins(cls, v):  # type: ignore[override]
         if v is None or isinstance(v, list):
             return v or []
         # Accept comma or whitespace separated
-        parts = [p.strip() for p in str(v).replace("\n", ",").replace(" ", ",").split(",") if p.strip()]
+        parts = [
+            p.strip()
+            for p in str(v).replace("\n", ",").replace(" ", ",").split(",")
+            if p.strip()
+        ]
         return parts
 
     @field_validator("cli_paths", mode="before")
