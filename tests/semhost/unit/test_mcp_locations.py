@@ -51,4 +51,3 @@ def test_locations_get_and_patch_roundtrip() -> None:
     assert r2.json() == d2
     st = client.get("/status").json()
     assert st["read"] == ["*.md"] and st["write"] == ["out/"]
-

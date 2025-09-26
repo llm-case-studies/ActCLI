@@ -14,8 +14,13 @@ router = APIRouter()
 
 @router.get("/models", response_model=list[ModelItem])
 def list_models_route(
-    refresh: bool = Query(default=False, description="Force refresh from providers (bypass cache)"),
-    strict: bool = Query(default=False, description="For CLI providers, show only discovered models (no fallbacks)"),
+    refresh: bool = Query(
+        default=False, description="Force refresh from providers (bypass cache)"
+    ),
+    strict: bool = Query(
+        default=False,
+        description="For CLI providers, show only discovered models (no fallbacks)",
+    ),
 ) -> List[ModelItem]:
     settings = get_settings()
     status = get_status()

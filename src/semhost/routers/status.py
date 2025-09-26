@@ -17,4 +17,3 @@ def get_status_route() -> Status:
 @router.patch("/status", response_model=Status)
 def patch_status_route(patch: StatusPatch) -> Status:
     return update_status(patch)
-

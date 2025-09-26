@@ -14,4 +14,3 @@ router = APIRouter()
 @router.get("/pricing", response_model=list[PricingRow])
 def get_pricing_route() -> List[PricingRow]:
     return pricing_catalog()
-

@@ -4,4 +4,3 @@ from __future__ import annotations
 
 MVP: not used; excel.inspect declared statically in mcp.registry.
 """
-

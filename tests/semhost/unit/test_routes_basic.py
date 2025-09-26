@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 from typing import List
 
-import pytest
 from fastapi.testclient import TestClient
 
 from semhost.main import create_app
@@ -36,7 +34,9 @@ def test_cors_preflight_allowed() -> None:
     assert r.status_code in (200, 204)
     assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
     assert "PATCH" in (r.headers.get("access-control-allow-methods") or "")
-    assert "content-type" in (r.headers.get("access-control-allow-headers") or "").lower()
+    assert (
+        "content-type" in (r.headers.get("access-control-allow-headers") or "").lower()
+    )
 
 
 def test_cors_preflight_denied_for_other_origin() -> None:
@@ -68,7 +68,7 @@ def test_status_roundtrip_and_ephemeral_restart() -> None:
             "window_k": 3,
             "max_rounds": 5,
             "read": ["*.md"],
-            "write": ["out/"]
+            "write": ["out/"],
         },
     )
     assert r2.status_code == 200
@@ -98,12 +98,34 @@ def test_models_available_and_blocked_reason(monkeypatch) -> None:
             self.display_name = display_name or model_id
             self.capabilities = {"generate": True}
 
-    monkeypatch.setattr(reg, "list_models_ollama", lambda host: [_MD("ollama", "llama3:8b")])
-    monkeypatch.setattr(reg, "list_models_openai", lambda key, refresh=False: [_MD("openai", "gpt-4o-mini")])
-    monkeypatch.setattr(reg, "list_models_anthropic", lambda key, refresh=False: [_MD("anthropic", "claude-3-haiku-20240307")])
-    monkeypatch.setattr(reg, "list_models_google", lambda key, refresh=False: [_MD("google", "gemini-1.5-flash-latest")])
-    monkeypatch.setattr(reg, "list_models_claude_cli", lambda refresh=False: [_MD("claude_cli", "sonnet")])
-    monkeypatch.setattr(reg, "list_models_codex_cli", lambda refresh=False: [_MD("codex_cli", "default")])
+    monkeypatch.setattr(
+        reg, "list_models_ollama", lambda host: [_MD("ollama", "llama3:8b")]
+    )
+    monkeypatch.setattr(
+        reg,
+        "list_models_openai",
+        lambda key, refresh=False: [_MD("openai", "gpt-4o-mini")],
+    )
+    monkeypatch.setattr(
+        reg,
+        "list_models_anthropic",
+        lambda key, refresh=False: [_MD("anthropic", "claude-3-haiku-20240307")],
+    )
+    monkeypatch.setattr(
+        reg,
+        "list_models_google",
+        lambda key, refresh=False: [_MD("google", "gemini-1.5-flash-latest")],
+    )
+    monkeypatch.setattr(
+        reg,
+        "list_models_claude_cli",
+        lambda refresh=False: [_MD("claude_cli", "sonnet")],
+    )
+    monkeypatch.setattr(
+        reg,
+        "list_models_codex_cli",
+        lambda refresh=False: [_MD("codex_cli", "default")],
+    )
 
     # Env/auth state
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -170,4 +192,3 @@ def test_auth_cli_login_semantics(monkeypatch) -> None:
     r2 = client.post("/auth/cli/login", json={"provider": "claude_cli"})
     assert r2.status_code == 200
     assert r2.json()["launched"] is True
-

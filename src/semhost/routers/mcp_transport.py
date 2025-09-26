@@ -28,6 +28,7 @@ def _now() -> int:
 
 def _mk_session_id() -> str:
     import secrets
+
     return f"sess-{secrets.token_hex(6)}"
 
 
@@ -55,8 +56,12 @@ def _prune_calls() -> None:
 async def mcp_route(
     request: Request,
     response: Response,
-    mcp_protocol_version: Optional[str] = Header(None, convert_underscores=False, alias="MCP-Protocol-Version"),
-    mcp_session_id: Optional[str] = Header(None, convert_underscores=False, alias="Mcp-Session-Id"),
+    mcp_protocol_version: Optional[str] = Header(
+        None, convert_underscores=False, alias="MCP-Protocol-Version"
+    ),
+    mcp_session_id: Optional[str] = Header(
+        None, convert_underscores=False, alias="Mcp-Session-Id"
+    ),
 ):
     """JSON-RPC over HTTP (streamable HTTP transport, POST /mcp).
 
@@ -87,7 +92,14 @@ async def mcp_route(
         return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
 
     def _rpc_err(code: int, message: str) -> JSONResponse:
-        return JSONResponse({"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}, status_code=200)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": code, "message": message},
+            },
+            status_code=200,
+        )
 
     # Handle notifications-only payload
     if method == "notifications/initialized":
@@ -97,7 +109,11 @@ async def mcp_route(
         result = {
             "protocolVersion": mcp_protocol_version or "2025-06-18",
             "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": "ActCLI-Core-MCP", "title": "ActCLI Core MCP", "version": "0.1.0"},
+            "serverInfo": {
+                "name": "ActCLI-Core-MCP",
+                "title": "ActCLI Core MCP",
+                "version": "0.1.0",
+            },
             "instructions": "Tools are local-only. Use tools/call and stream via /mcp/sse?job=…",
             "session": {"id": sid, "header": "Mcp-Session-Id"},
         }
@@ -109,12 +125,14 @@ async def mcp_route(
         tools = list_tools()
         items: List[Dict[str, Any]] = []
         for t in tools:
-            items.append({
-                "name": t.id,
-                "title": t.title,
-                "description": t.description,
-                "inputSchema": t.params_schema,
-            })
+            items.append(
+                {
+                    "name": t.id,
+                    "title": t.title,
+                    "description": t.description,
+                    "inputSchema": t.params_schema,
+                }
+            )
         return _rpc_ok({"tools": items, "nextCursor": None})
 
     if method == "tools/call":
@@ -139,27 +157,34 @@ async def mcp_route(
                 # Move to OFFLINE if not already
                 if getattr(st, "mode", None) and str(st.mode) != "OFFLINE":
                     from ..schemas.status import StatusPatch
+
                     update_status(StatusPatch(mode="OFFLINE", cloud_share=False))
                 # Hint via header for clients
                 response.headers["X-ActCLI-Mode"] = "OFFLINE"
                 # Append audit event
                 try:
                     from pathlib import Path as _P
-                    import json as _json, time as _time
-                    audit_path = _P('out') / 'audit.json'
+                    import json as _json
+                    import time as _time
+
+                    audit_path = _P("out") / "audit.json"
                     try:
-                        existing = _json.loads(audit_path.read_text(encoding='utf-8'))
+                        existing = _json.loads(audit_path.read_text(encoding="utf-8"))
                         if not isinstance(existing, list):
                             existing = []
                     except Exception:
                         existing = []
-                    existing.append({
-                        "event": "mode_lock_local",
-                        "session": sid,
-                        "ts": int(_time.time()),
-                        "path": pth,
-                    })
-                    audit_path.write_text(_json.dumps(existing, indent=2), encoding='utf-8')
+                    existing.append(
+                        {
+                            "event": "mode_lock_local",
+                            "session": sid,
+                            "ts": int(_time.time()),
+                            "path": pth,
+                        }
+                    )
+                    audit_path.write_text(
+                        _json.dumps(existing, indent=2), encoding="utf-8"
+                    )
                 except Exception:
                     pass
 
@@ -180,4 +205,7 @@ async def mcp_route(
 
 @router.get("/mcp")
 def mcp_get_not_supported():
-    return PlainTextResponse("SSE for unsolicited notifications not enabled; use /mcp/sse?job=…", status_code=405)
+    return PlainTextResponse(
+        "SSE for unsolicited notifications not enabled; use /mcp/sse?job=…",
+        status_code=405,
+    )

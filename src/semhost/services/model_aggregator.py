@@ -59,7 +59,13 @@ def _policy_allowed(source: str, status: Status) -> tuple[bool, str | None]:
     return True, None
 
 
-def aggregate_models(settings: SemhostSettings, status: Status, *, refresh: bool = False, strict_cli: bool = False) -> List[ModelItem]:
+def aggregate_models(
+    settings: SemhostSettings,
+    status: Status,
+    *,
+    refresh: bool = False,
+    strict_cli: bool = False,
+) -> List[ModelItem]:
     items: List[ModelItem] = []
 
     # We avoid invoking subprocess probes here; use binary presence only.
@@ -138,8 +144,14 @@ def aggregate_models(settings: SemhostSettings, status: Status, *, refresh: bool
                 rows = func(refresh=refresh)
             cli_bin_ok = bool(shutil.which(bin_name))
             auth_state = "ready" if cli_bin_ok else "missing"
-            hint = None if cli_bin_ok else (
-                "Install with: npm i -g @anthropic-ai/claude-code" if provider == "claude_cli" else "Install with: npm i -g @openai/codex"
+            hint = (
+                None
+                if cli_bin_ok
+                else (
+                    "Install with: npm i -g @anthropic-ai/claude-code"
+                    if provider == "claude_cli"
+                    else "Install with: npm i -g @openai/codex"
+                )
             )
 
             mech = "cli"

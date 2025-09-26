@@ -11,7 +11,11 @@ from ..schemas.providers import (
     CliModelSwitchRequest,
     CliModelSwitchResponse,
 )
-from ..services.providers_service import providers_doctor_rows, providers_login, providers_switch_model
+from ..services.providers_service import (
+    providers_doctor_rows,
+    providers_login,
+    providers_switch_model,
+)
 from ..deps import get_settings
 from fastapi import HTTPException
 

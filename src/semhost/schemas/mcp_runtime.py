@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Literal, List, Dict, Any
+from typing import Optional, Literal, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -38,4 +38,3 @@ class CancelResponse(BaseModel):
     ok: bool
     job_id: str
     note: Optional[str] = None
-

@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Selector Engine Tests</title>
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; margin: 16px; }
+      .ok { color: #16a34a; }
+      .fail { color: #dc2626; }
+      .case { margin-bottom: 12px; }
+      .wrap { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+      .ce { min-height: 40px; padding: 6px; border: 1px solid #e5e7eb; }
+      #out pre { background: #f8fafc; padding: 8px; border-radius: 6px; }
+    </style>
+    <script src="../src/shared/selectors.js"></script>
+  </head>
+  <body>
+    <h3>Selector Engine Tests</h3>
+    <div id="out"></div>
+    <script>
+      function assert(cond, msg){
+        const div = document.createElement('div');
+        div.className = 'case ' + (cond ? 'ok' : 'fail');
+        div.textContent = (cond ? 'PASS: ' : 'FAIL: ') + msg;
+        document.getElementById('out').appendChild(div);
+      }
+      function log(obj){
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(obj, null, 2);
+        document.getElementById('out').appendChild(pre);
+      }
+
+      // Case 1: textarea page shape
+      (function(){
+        const wrap = document.createElement('div');
+        wrap.className = 'wrap';
+        wrap.innerHTML = `
+          <textarea id="composer" aria-label="message"></textarea>
+          <button id="send">Send</button>
+          <div id="history" role="list"></div>
+        `;
+        document.body.appendChild(wrap);
+        const sel = window.__actcliSelectors;
+        const inputEl = document.getElementById('composer');
+        const sendEl = document.getElementById('send');
+        const histEl = document.getElementById('history');
+        const sIn = sel.pickBestSelector(inputEl, 'input');
+        const sSe = sel.pickBestSelector(sendEl, 'send');
+        const sHi = sel.pickBestSelector(histEl, 'history');
+        assert(sIn === '#composer', 'textarea input picks by id');
+        assert(sSe === '#send', 'send button picks by id');
+        assert(sHi === '#history', 'history picks by id');
+      })();
+
+      // Case 2: contenteditable with role=textbox, no id
+      (function(){
+        const wrap = document.createElement('div');
+        wrap.className = 'wrap';
+        wrap.innerHTML = `
+          <div class="ce" contenteditable="true" role="textbox" aria-label="message"></div>
+          <button class="btn primary">Reply</button>
+          <div class="list" role="list"></div>
+        `;
+        document.body.appendChild(wrap);
+        const sel = window.__actcliSelectors;
+        const inputEl = wrap.querySelector('[role="textbox"]');
+        const sendEl = wrap.querySelector('button');
+        const histEl = wrap.querySelector('[role="list"]');
+        const sIn = sel.pickBestSelector(inputEl, 'input');
+        const sSe = sel.pickBestSelector(sendEl, 'send');
+        const sHi = sel.pickBestSelector(histEl, 'history');
+        assert(/div\[role="textbox"\]/.test(sIn), 'contenteditable input uses role selector');
+        assert(/button/.test(sSe), 'send uses button-based selector');
+        assert(/\[role="list"\]/.test(sHi), 'history uses role selector');
+      })();
+
+      // Case 3: Scoring proximity — ensure input near send scores well
+      (function(){
+        const wrap = document.createElement('div');
+        wrap.className = 'wrap';
+        wrap.innerHTML = `
+          <div>
+            <textarea class="msgbox"></textarea>
+            <button>Send</button>
+          </div>
+        `;
+        document.body.appendChild(wrap);
+        const sel = window.__actcliSelectors;
+        const inputEl = wrap.querySelector('textarea');
+        const score = sel.scoreCandidate(inputEl, 'input');
+        assert(score >= 38, 'input score includes neighbor send bonus');
+      })();
+    </script>
+  </body>
+  </html>
+

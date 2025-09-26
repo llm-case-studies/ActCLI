@@ -19,7 +19,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/overlay.js", "src/content/index.js"],
+      "js": ["src/shared/selectors.js", "src/content/overlay.js", "src/content/index.js"],
       "all_frames": true,
       "run_at": "document_idle"
     }

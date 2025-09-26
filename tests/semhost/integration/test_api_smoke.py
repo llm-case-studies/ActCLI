@@ -16,4 +16,3 @@ def test_openapi_and_docs_smoke() -> None:
     r2 = c.get("/docs")
     # Swagger UI may return 200 even if assets not loaded; status is enough here
     assert r2.status_code == 200
-

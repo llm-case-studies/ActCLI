@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -14,7 +14,11 @@ router = APIRouter()
 
 
 @router.get("/history", response_model=List[HistoryRow])
-def history_route(provider: str = Query(...), id: str = Query(...), limit: int = Query(50, ge=1, le=500)) -> List[HistoryRow]:
+def history_route(
+    provider: str = Query(...),
+    id: str = Query(...),
+    limit: int = Query(50, ge=1, le=500),
+) -> List[HistoryRow]:
     """Best-effort usage history for a given provider:id by scanning out/sessions/*.
 
     Matches entries whose model_id contains the given id token. For providers that
@@ -66,7 +70,11 @@ def history_route(provider: str = Query(...), id: str = Query(...), limit: int =
                             continue
                         if prov == "gemini_cli" and "(gemini-cli)" not in model_id:
                             continue
-                        if prov in ("openai", "anthropic", "google") and not model_id.endswith("(cloud)"):
+                        if prov in (
+                            "openai",
+                            "anthropic",
+                            "google",
+                        ) and not model_id.endswith("(cloud)"):
                             continue
                     ok = bool(e.get("ok"))
                     latency_ms = int(e.get("latency_ms") or 0)
@@ -89,5 +97,4 @@ def history_route(provider: str = Query(...), id: str = Query(...), limit: int =
         raise HTTPException(status_code=500, detail=f"history scan error: {e}")
     # Newest-first by started_at then limit
     rows.sort(key=lambda r: (r.started_at, r.round_index), reverse=True)
-    return rows[: limit]
-
+    return rows[:limit]

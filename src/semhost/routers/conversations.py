@@ -23,8 +23,14 @@ def conversations_export_route(
     try:
         st = get_default_settings()
         out_root = Path(st.output_dir)
-        path = export_conversation(session_id, out_root=out_root, format=format, compact=compact, window_k=window_k, include_events=include_events)
+        path = export_conversation(
+            session_id,
+            out_root=out_root,
+            format=format,
+            compact=compact,
+            window_k=window_k,
+            include_events=include_events,
+        )
         return {"path": str(path)}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-

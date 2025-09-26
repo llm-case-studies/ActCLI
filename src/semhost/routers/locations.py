@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import APIRouter
 
 from ..deps import get_status, update_status
-from ..schemas.status import Status, StatusPatch
+from ..schemas.status import StatusPatch
 
 
 router = APIRouter()
@@ -24,4 +24,3 @@ def patch_locations_route(body: Dict[str, List[str]]) -> Dict[str, List[str]]:
     patch = StatusPatch(read=read, write=write)
     st = update_status(patch)
     return {"read": list(st.read or []), "write": list(st.write or [])}
-

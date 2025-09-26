@@ -15,4 +15,3 @@ class MCPServer(BaseModel):
 
 class MCPPatch(BaseModel):
     enabled: bool = Field(..., description="Enable or disable this MCP server")
-

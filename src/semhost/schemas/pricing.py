@@ -19,4 +19,3 @@ class PricingRow(BaseModel):
     provider: str
     id: str
     pricing: PricingInfo
-

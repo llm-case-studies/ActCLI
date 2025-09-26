@@ -11,6 +11,7 @@ class PickerOverlay {
     this._lastTarget = null;
     this._onClick = this._onClick.bind(this);
     this._onMove = this._onMove.bind(this);
+    this._onKey = this._onKey.bind(this);
   }
 
   mount() {
@@ -47,6 +48,7 @@ class PickerOverlay {
     this._stage = 'input';
     document.addEventListener('mousemove', this._onMove, true);
     document.addEventListener('click', this._onClick, true);
+    document.addEventListener('keydown', this._onKey, true);
     this._setTip('Pick: input');
   }
 
@@ -54,6 +56,7 @@ class PickerOverlay {
     this._active = false;
     document.removeEventListener('mousemove', this._onMove, true);
     document.removeEventListener('click', this._onClick, true);
+    document.removeEventListener('keydown', this._onKey, true);
     if (this._root) {
       this._root.remove();
       this._root = null;
@@ -91,7 +94,15 @@ class PickerOverlay {
     ev.stopPropagation();
     ev.preventDefault();
     const el = this._lastTarget || ev.target;
-    const sel = computeSelector(el);
+    // Prefer shared selector engine if available
+    const kind = this._stage; // 'input' | 'send' | 'history'
+    let sel = null;
+    try {
+      if (window.__actcliSelectors?.pickBestSelector) {
+        sel = window.__actcliSelectors.pickBestSelector(el, kind);
+      }
+    } catch {}
+    if (!sel) sel = computeSelector(el);
     const role = el.getAttribute('role') || '';
     let nextStage = null;
     if (this._stage === 'input') nextStage = 'send';
@@ -105,6 +116,16 @@ class PickerOverlay {
     } else {
       this._stage = nextStage;
       this._setTip(`Pick: ${this._stage}`);
+    }
+  }
+
+  _onKey(ev) {
+    if (!this._active) return;
+    if (ev.key === 'Escape') {
+      ev.stopPropagation();
+      ev.preventDefault();
+      this.stop();
+      window.postMessage({ __actcli_pick: true, stage: 'cancel' }, '*');
     }
   }
 }

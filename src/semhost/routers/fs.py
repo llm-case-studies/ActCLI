@@ -23,25 +23,29 @@ def fs_ro_list(
         entries: List[dict] = []
         if p.is_dir():
             # List entries (limited), sorted by name
-            for child in sorted(p.iterdir(), key=lambda x: x.name)[: limit]:
+            for child in sorted(p.iterdir(), key=lambda x: x.name)[:limit]:
                 try:
-                    entries.append({
-                        "name": child.name,
-                        "path": str(child),
-                        "type": ("dir" if child.is_dir() else "file"),
-                        "size": (child.stat().st_size if child.is_file() else None),
-                    })
+                    entries.append(
+                        {
+                            "name": child.name,
+                            "path": str(child),
+                            "type": ("dir" if child.is_dir() else "file"),
+                            "size": (child.stat().st_size if child.is_file() else None),
+                        }
+                    )
                 except Exception:
                     continue
             return entries
         else:
             # Return single file info
-            return [{
-                "name": p.name,
-                "path": str(p),
-                "type": "file",
-                "size": p.stat().st_size,
-            }]
+            return [
+                {
+                    "name": p.name,
+                    "path": str(p),
+                    "type": "file",
+                    "size": p.stat().st_size,
+                }
+            ]
     except HTTPException:
         raise
     except Exception as e:
@@ -50,7 +54,9 @@ def fs_ro_list(
 
 @router.get("/fs/out/list")
 def fs_out_list(
-    path: str = Query(default="out", description="Absolute or relative path under ./out"),
+    path: str = Query(
+        default="out", description="Absolute or relative path under ./out"
+    ),
     limit: int = Query(default=500, ge=1, le=5000),
 ) -> List[dict]:
     try:
@@ -62,19 +68,28 @@ def fs_out_list(
             raise HTTPException(status_code=404, detail="path not found")
         entries: List[dict] = []
         if p.is_dir():
-            for child in sorted(p.iterdir(), key=lambda x: x.name)[: limit]:
+            for child in sorted(p.iterdir(), key=lambda x: x.name)[:limit]:
                 try:
-                    entries.append({
-                        "name": child.name,
-                        "path": str(child),
-                        "type": ("dir" if child.is_dir() else "file"),
-                        "size": (child.stat().st_size if child.is_file() else None),
-                    })
+                    entries.append(
+                        {
+                            "name": child.name,
+                            "path": str(child),
+                            "type": ("dir" if child.is_dir() else "file"),
+                            "size": (child.stat().st_size if child.is_file() else None),
+                        }
+                    )
                 except Exception:
                     continue
             return entries
         else:
-            return [{"name": p.name, "path": str(p), "type": "file", "size": p.stat().st_size }]
+            return [
+                {
+                    "name": p.name,
+                    "path": str(p),
+                    "type": "file",
+                    "size": p.stat().st_size,
+                }
+            ]
     except HTTPException:
         raise
     except Exception as e:
@@ -82,7 +97,9 @@ def fs_out_list(
 
 
 @router.get("/fs/out/get")
-def fs_out_get(path: str = Query(..., description="Absolute or relative path under ./out")) -> str:
+def fs_out_get(
+    path: str = Query(..., description="Absolute or relative path under ./out"),
+) -> str:
     try:
         base = Path("out").resolve()
         p = Path(path).resolve()
@@ -91,7 +108,7 @@ def fs_out_get(path: str = Query(..., description="Absolute or relative path und
         if not p.exists() or not p.is_file():
             raise HTTPException(status_code=404, detail="file not found")
         # Read as text (md/json). For binary, this will error; SPA should only request text.
-        return p.read_text(encoding='utf-8', errors='ignore')
+        return p.read_text(encoding="utf-8", errors="ignore")
     except HTTPException:
         raise
     except Exception as e:

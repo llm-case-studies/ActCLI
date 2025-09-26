@@ -33,4 +33,3 @@ class StatusPatch(BaseModel):
     max_rounds: Optional[int] = Field(default=None, ge=1)
     read: Optional[List[str]] = None
     write: Optional[List[str]] = None
-

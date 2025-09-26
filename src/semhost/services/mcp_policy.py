@@ -4,4 +4,3 @@ from __future__ import annotations
 
 MVP: placeholder; actual checks to be implemented alongside excel.inspect worker.
 """
-

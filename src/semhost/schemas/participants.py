@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +10,9 @@ class BoundParams(BaseModel):
     system: Optional[str] = None
     timeout_s: Optional[int] = Field(default=None, ge=1)
     temperature: Optional[float] = None
-    reasoning: Optional[str] = None  # minimal|low|medium|high (provider-specific; optional)
+    reasoning: Optional[str] = (
+        None  # minimal|low|medium|high (provider-specific; optional)
+    )
 
 
 class ParticipantIn(BaseModel):
