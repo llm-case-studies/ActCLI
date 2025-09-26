@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Set
+from typing import Dict, Set, Tuple, Optional
+import time
 
 from fastapi import WebSocket
+from .deps import get_settings
 
 
 @dataclass
@@ -16,6 +18,26 @@ class EventBus:
 
     def __init__(self) -> None:
         self._subs: Dict[str, _Subs] = {}
+        self._conn_attempts: Dict[str, list[float]] = {}
+        self._fail_counts: Dict[str, int] = {}
+        self._tripped_until: Dict[str, float] = {}
+
+    def allow_connect(self, session_id: str) -> Tuple[bool, Optional[str]]:
+        """Rate limit websocket connections per session (sliding 60s window).
+
+        Returns (allowed, reason_if_denied).
+        """
+        st = get_settings()
+        limit = max(1, int(getattr(st, "ws_connects_per_minute_limit", 120)))
+        now = time.time()
+        window = self._conn_attempts.get(session_id, [])
+        window = [t for t in window if now - t < 60.0]
+        if len(window) >= limit:
+            self._conn_attempts[session_id] = window
+            return (False, "rate limited: too many connections, try again later")
+        window.append(now)
+        self._conn_attempts[session_id] = window
+        return (True, None)
 
     async def subscribe(self, session_id: str, ws: WebSocket) -> None:
         group = self._subs.get(session_id)
@@ -37,16 +59,31 @@ class EventBus:
         group = self._subs.get(session_id)
         if not group:
             return
+        now = time.time()
+        until = self._tripped_until.get(session_id)
+        if until and now < until:
+            return
         dead: Set[WebSocket] = set()
         for ws in list(group.sockets):
             try:
-                await ws.send_json({
-                    "type": event_type,
-                    "session_id": session_id,
-                    **payload,
-                })
+                await ws.send_json(
+                    {
+                        "type": event_type,
+                        "session_id": session_id,
+                        **payload,
+                    }
+                )
             except Exception:
                 dead.add(ws)
+                st = get_settings()
+                threshold = max(1, int(getattr(st, "ws_fail_threshold", 50)))
+                cooldown = max(1, int(getattr(st, "ws_cooldown_s", 10)))
+                cnt = 1 + int(self._fail_counts.get(session_id, 0))
+                if cnt >= threshold:
+                    self._tripped_until[session_id] = now + float(cooldown)
+                    self._fail_counts[session_id] = 0
+                else:
+                    self._fail_counts[session_id] = cnt
         for ws in dead:
             await self.unsubscribe(session_id, ws)
 
@@ -59,4 +96,3 @@ def get_event_bus() -> EventBus:
     if _BUS is None:
         _BUS = EventBus()
     return _BUS
-

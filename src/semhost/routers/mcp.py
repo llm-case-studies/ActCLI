@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ..schemas.mcp import MCPServer, MCPPatch
 from ..services.mcp_service import list_servers, set_enabled, get_server
+from ..errors import NotFoundError
 
 
 router = APIRouter()
@@ -19,6 +20,5 @@ def list_mcp_route() -> List[MCPServer]:
 @router.patch("/mcp/{name}", response_model=MCPServer)
 def patch_mcp_route(name: str, patch: MCPPatch) -> MCPServer:
     if get_server(name) is None:
-        raise HTTPException(status_code=404, detail="mcp server not found")
+        raise NotFoundError("mcp server not found")
     return set_enabled(name, patch.enabled)
-

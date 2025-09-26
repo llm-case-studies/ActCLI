@@ -27,7 +27,6 @@ class RoundRecordOut(BaseModel):
     @staticmethod
     def from_round(rr) -> "RoundRecordOut":
         # Import locally to avoid circulars
-        from actcli.seminar.rounds import RoundRecord as _RR
 
         if not hasattr(rr, "index"):
             raise ValueError("invalid RoundRecord")
@@ -76,3 +75,14 @@ class SessionSnapshot(BaseModel):
     participants: List[ParticipantOut] = Field(default_factory=list)
     history: List[RoundRecordOut] = Field(default_factory=list)
 
+
+# Round request bodies
+class RoundStartRequest(BaseModel):
+    prompt: str
+    focus: Optional[List[str]] = None
+    seed: Optional[int] = None
+    timeout_s: int = Field(default=25, ge=1)
+
+
+class RoundNextRequest(RoundStartRequest):
+    pass

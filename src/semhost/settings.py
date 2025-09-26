@@ -33,13 +33,27 @@ class SemhostSettings(BaseSettings):
     # Disable vendor CLI MCP/tools globally (best-effort)
     cli_disable_tools: bool = Field(default=True, alias="SEMHOST_CLI_DISABLE_TOOLS")
 
+    # WebSocket stability controls (rate-limit + circuit breaker)
+    ws_connects_per_minute_limit: int = Field(
+        default=120, alias="SEMHOST_WS_CONNS_PER_MIN"
+    )
+    ws_fail_threshold: int = Field(default=50, alias="SEMHOST_WS_FAIL_THRESHOLD")
+    ws_cooldown_s: int = Field(default=10, alias="SEMHOST_WS_COOLDOWN_S")
+
+    # Persistence
+    db_path: str = Field(default="out/semhost.db", alias="SEMHOST_DB_PATH")
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _parse_origins(cls, v):  # type: ignore[override]
         if v is None or isinstance(v, list):
             return v or []
         # Accept comma or whitespace separated
-        parts = [p.strip() for p in str(v).replace("\n", ",").replace(" ", ",").split(",") if p.strip()]
+        parts = [
+            p.strip()
+            for p in str(v).replace("\n", ",").replace(" ", ",").split(",")
+            if p.strip()
+        ]
         return parts
 
     @field_validator("cli_paths", mode="before")

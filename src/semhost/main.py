@@ -24,6 +24,8 @@ from .routers import admin as admin_router
 from .routers import discovery as discovery_router
 from .routers import fs as fs_router
 from .routers import mcp_transport as mcp_transport_router
+from .errors import register_exception_handlers
+from .services import persistence as persistence_service
 
 
 def create_app(settings: SemhostSettings | None = None) -> FastAPI:
@@ -75,5 +77,15 @@ def create_app(settings: SemhostSettings | None = None) -> FastAPI:
 
     # Ephemeral state: reset status on app creation (Sprint 1)
     _deps.reset_status()
+
+    # Standard error handling for domain exceptions
+    register_exception_handlers(app)
+
+    # Initialize persistence (SQLite with WAL)
+    try:
+        persistence_service.init_db()
+    except Exception:
+        # Non-fatal: app still runs without DB persistence
+        pass
 
     return app

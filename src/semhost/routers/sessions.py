@@ -3,18 +3,27 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 import asyncio
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ..deps import get_status
-from ..schemas.participants import BoundParams, ParticipantIn, ParticipantOut
 from ..schemas.sessions import (
     RoundRecordOut,
     SessionCreate,
     SessionPatch,
     SessionSnapshot,
+    RoundStartRequest,
+    RoundNextRequest,
 )
-from ..services.orchestrator_service import OrchestratorRegistry, SessionWrapper, build_adapters
+from ..schemas.events import (
+    RoundStartEvent,
+    TurnResultEvent,
+    RoundEndEvent,
+    ArtifactsSavedEvent,
+)
+from ..services.orchestrator_service import OrchestratorRegistry, build_adapters
 from ..events import get_event_bus
+from ..services import persistence as persistence_service
+from ..errors import NotFoundError, BadRequestError
 
 
 router = APIRouter()
@@ -31,10 +40,25 @@ async def create_session_route(req: SessionCreate) -> Dict[str, str]:
     adapters, meta = build_adapters(req.participants or [], allow_cloud=allow_cloud)
     window_k = req.window_k if req.window_k is not None else status.window_k
     wrapper = _REGISTRY.create_with_meta(
-        adapters=adapters, participants_meta=meta, window_k=window_k, max_rounds=req.max_rounds
+        adapters=adapters,
+        participants_meta=meta,
+        window_k=window_k,
+        max_rounds=req.max_rounds,
     )
     bus = get_event_bus()
     await bus.emit(wrapper.orchestrator.state.id, "session_start", {"round_idx": 0})
+    # Persist initial session metadata (best-effort)
+    try:
+        snap = wrapper.to_snapshot()
+        persistence_service.upsert_session(
+            session_id=snap.id,
+            created_at=snap.created_at,
+            window_k=snap.window_k,
+            max_rounds=snap.max_rounds,
+            participants=[p.model_dump() for p in snap.participants],
+        )
+    except Exception:
+        pass
     return {"session_id": wrapper.orchestrator.state.id}
 
 
@@ -68,7 +92,7 @@ async def list_sessions_route() -> list[dict]:
 async def get_session_route(session_id: str) -> SessionSnapshot:
     wrapper = _REGISTRY.get(session_id)
     if wrapper is None:
-        raise HTTPException(status_code=404, detail="session not found")
+        raise NotFoundError("session not found")
     return wrapper.to_snapshot()
 
 
@@ -76,7 +100,7 @@ async def get_session_route(session_id: str) -> SessionSnapshot:
 async def patch_session_route(session_id: str, patch: SessionPatch) -> SessionSnapshot:
     wrapper = _REGISTRY.get(session_id)
     if wrapper is None:
-        raise HTTPException(status_code=404, detail="session not found")
+        raise NotFoundError("session not found")
 
     status = get_status()
     allow_cloud = status.mode == "HYBRID" and bool(status.cloud_share)
@@ -89,22 +113,33 @@ async def patch_session_route(session_id: str, patch: SessionPatch) -> SessionSn
         wrapper.orchestrator.state.window_k = int(patch.window_k)
     if patch.max_rounds is not None:
         wrapper.orchestrator.state.max_rounds = patch.max_rounds
-
+    # Persist updated session metadata (best-effort)
+    try:
+        snap = wrapper.to_snapshot()
+        persistence_service.upsert_session(
+            session_id=snap.id,
+            created_at=snap.created_at,
+            window_k=snap.window_k,
+            max_rounds=snap.max_rounds,
+            participants=[p.model_dump() for p in snap.participants],
+        )
+    except Exception:
+        pass
     return wrapper.to_snapshot()
 
 
 @router.post("/sessions/{session_id}/round/start", response_model=RoundRecordOut)
-async def round_start_route(session_id: str, body: dict) -> RoundRecordOut:
+async def round_start_route(session_id: str, req: RoundStartRequest) -> RoundRecordOut:
     wrapper = _REGISTRY.get(session_id)
     if wrapper is None:
-        raise HTTPException(status_code=404, detail="session not found")
+        raise NotFoundError("session not found")
 
-    prompt = str(body.get("prompt") or "").strip()
+    prompt = req.prompt.strip()
     if not prompt:
-        raise HTTPException(status_code=400, detail="prompt is required")
-    focus: Optional[List[str]] = body.get("focus") or None
-    seed: Optional[int] = body.get("seed")
-    timeout_s: int = int(body.get("timeout_s") or 25)
+        raise BadRequestError("prompt is required")
+    focus: Optional[List[str]] = req.focus or None
+    seed: Optional[int] = req.seed
+    timeout_s: int = int(req.timeout_s or 25)
 
     if focus:
         wrapper.orchestrator.set_focus_next(focus)
@@ -114,60 +149,118 @@ async def round_start_route(session_id: str, body: dict) -> RoundRecordOut:
         wrapper.orchestrator.start()
 
     bus = get_event_bus()
-    await bus.emit(session_id, "round_start", {"index": wrapper.orchestrator.state.round_idx, "prompt": prompt})
-    rr = await asyncio.to_thread(wrapper.orchestrator.run_current_round, prompt=prompt, seed=seed, timeout_s=timeout_s)
+    evt_start = RoundStartEvent(
+        session_id=session_id, index=wrapper.orchestrator.state.round_idx, prompt=prompt
+    )
+    await bus.emit(session_id, evt_start.type, evt_start.model_dump())
+    rr = await asyncio.to_thread(
+        wrapper.orchestrator.run_current_round,
+        prompt=prompt,
+        seed=seed,
+        timeout_s=timeout_s,
+    )
     # Stream individual turn results
     for e in rr.entries:
-        await bus.emit(
-            session_id,
-            "turn_result",
-            {
-                "index": rr.index,
-                "alias": e.alias,
-                "ok": e.ok,
-                "latency_ms": e.latency_ms,
-                "text": e.text,
-                "error": e.error,
-            },
+        evt_turn = TurnResultEvent(
+            session_id=session_id,
+            index=rr.index,
+            alias=e.alias,
+            ok=bool(e.ok),
+            latency_ms=int(e.latency_ms),
+            text=getattr(e, "text", None),
+            error=getattr(e, "error", None),
         )
-    await bus.emit(session_id, "round_end", {"index": rr.index})
-    await bus.emit(session_id, "artifacts_saved", {"index": rr.index})
+        await bus.emit(session_id, evt_turn.type, evt_turn.model_dump())
+    evt_end = RoundEndEvent(session_id=session_id, index=rr.index)
+    await bus.emit(session_id, evt_end.type, evt_end.model_dump())
+    evt_saved = ArtifactsSavedEvent(session_id=session_id, index=rr.index)
+    await bus.emit(session_id, evt_saved.type, evt_saved.model_dump())
+    # Persist round and session snapshot (best-effort)
+    try:
+        snap = wrapper.to_snapshot()
+        persistence_service.upsert_session(
+            session_id=snap.id,
+            created_at=snap.created_at,
+            window_k=snap.window_k,
+            max_rounds=snap.max_rounds,
+            participants=[p.model_dump() for p in snap.participants],
+        )
+        rr_out = RoundRecordOut.from_round(rr)
+        persistence_service.persist_round(
+            session_id=snap.id,
+            index=rr_out.index,
+            started_at=rr_out.started_at,
+            completed_at=rr_out.completed_at,
+            synopsis=rr_out.synopsis,
+            entries=[e.model_dump() for e in rr_out.entries],
+        )
+    except Exception:
+        pass
     return RoundRecordOut.from_round(rr)
 
 
 @router.post("/sessions/{session_id}/round/next", response_model=RoundRecordOut)
-async def round_next_route(session_id: str, body: dict | None = None) -> RoundRecordOut:
+async def round_next_route(
+    session_id: str, req: RoundNextRequest | None = None
+) -> RoundRecordOut:
     wrapper = _REGISTRY.get(session_id)
     if wrapper is None:
-        raise HTTPException(status_code=404, detail="session not found")
+        raise NotFoundError("session not found")
 
-    prompt = str((body or {}).get("prompt") or "").strip()
+    prompt = (req.prompt if req else "").strip()
     if not prompt:
-        raise HTTPException(status_code=400, detail="prompt is required")
-    focus: Optional[List[str]] = (body or {}).get("focus") or None
-    seed: Optional[int] = (body or {}).get("seed")
-    timeout_s: int = int((body or {}).get("timeout_s") or 25)
+        raise BadRequestError("prompt is required")
+    focus: Optional[List[str]] = (req.focus if req else None) or None
+    seed: Optional[int] = req.seed if req else None
+    timeout_s: int = int((req.timeout_s if req else 25) or 25)
 
     if focus:
         wrapper.orchestrator.set_focus_next(focus)
     # Advance to next round and execute
     next_idx = wrapper.orchestrator.next_round()
     bus = get_event_bus()
-    await bus.emit(session_id, "round_start", {"index": next_idx, "prompt": prompt})
-    rr = await asyncio.to_thread(wrapper.orchestrator.run_current_round, prompt=prompt, seed=seed, timeout_s=timeout_s)
+    evt_start = RoundStartEvent(session_id=session_id, index=next_idx, prompt=prompt)
+    await bus.emit(session_id, evt_start.type, evt_start.model_dump())
+    rr = await asyncio.to_thread(
+        wrapper.orchestrator.run_current_round,
+        prompt=prompt,
+        seed=seed,
+        timeout_s=timeout_s,
+    )
     for e in rr.entries:
-        await bus.emit(
-            session_id,
-            "turn_result",
-            {
-                "index": rr.index,
-                "alias": e.alias,
-                "ok": e.ok,
-                "latency_ms": e.latency_ms,
-                "text": e.text,
-                "error": e.error,
-            },
+        evt_turn = TurnResultEvent(
+            session_id=session_id,
+            index=rr.index,
+            alias=e.alias,
+            ok=bool(e.ok),
+            latency_ms=int(e.latency_ms),
+            text=getattr(e, "text", None),
+            error=getattr(e, "error", None),
         )
-    await bus.emit(session_id, "round_end", {"index": rr.index})
-    await bus.emit(session_id, "artifacts_saved", {"index": rr.index})
+        await bus.emit(session_id, evt_turn.type, evt_turn.model_dump())
+    evt_end = RoundEndEvent(session_id=session_id, index=rr.index)
+    await bus.emit(session_id, evt_end.type, evt_end.model_dump())
+    evt_saved = ArtifactsSavedEvent(session_id=session_id, index=rr.index)
+    await bus.emit(session_id, evt_saved.type, evt_saved.model_dump())
+    # Persist round and session snapshot (best-effort)
+    try:
+        snap = wrapper.to_snapshot()
+        persistence_service.upsert_session(
+            session_id=snap.id,
+            created_at=snap.created_at,
+            window_k=snap.window_k,
+            max_rounds=snap.max_rounds,
+            participants=[p.model_dump() for p in snap.participants],
+        )
+        rr_out = RoundRecordOut.from_round(rr)
+        persistence_service.persist_round(
+            session_id=snap.id,
+            index=rr_out.index,
+            started_at=rr_out.started_at,
+            completed_at=rr_out.completed_at,
+            synopsis=rr_out.synopsis,
+            entries=[e.model_dump() for e in rr_out.entries],
+        )
+    except Exception:
+        pass
     return RoundRecordOut.from_round(rr)
