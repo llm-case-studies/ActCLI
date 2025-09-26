@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import List
 
 from fastapi.testclient import TestClient
 
@@ -16,7 +15,10 @@ def test_session_create_get_patch_roundtrip() -> None:
     client = _client()
 
     # Create with single echo participant
-    req = {"participants": [{"alias": "p1", "provider": "echo", "model_id": "echo"}], "window_k": 2}
+    req = {
+        "participants": [{"alias": "p1", "provider": "echo", "model_id": "echo"}],
+        "window_k": 2,
+    }
     r = client.post("/sessions", json=req)
     assert r.status_code == 200
     sid = r.json()["session_id"]
@@ -52,4 +54,3 @@ def test_session_create_get_patch_roundtrip() -> None:
     rr = r1.json()
     assert rr["index"] == 1
     assert len(rr["entries"]) == 2
-

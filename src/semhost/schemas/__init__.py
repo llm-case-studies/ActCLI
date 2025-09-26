@@ -1,2 +1,1 @@
 """Pydantic schema modules (scaffold)."""
-

@@ -39,7 +39,9 @@ async def chat_one_route(req: ChatOneRequest) -> ChatOneResponse:
     )
     adapters, _meta = build_adapters([pi], allow_cloud=allow_cloud)
     if not adapters:
-        raise HTTPException(status_code=400, detail="no adapter available for given provider/model")
+        raise HTTPException(
+            status_code=400, detail="no adapter available for given provider/model"
+        )
 
     # Run a one-off round
     from actcli.seminar.rounds import RoundOrchestrator
@@ -64,7 +66,12 @@ async def chat_one_route(req: ChatOneRequest) -> ChatOneResponse:
             # Leave SEMHOST_CLI_DEBUG as-is if set globally
         if req.disable_tools:
             os.environ["ACTCLI_DISABLE_CLI_MCP"] = "1"
-        rr = await asyncio.to_thread(orch.run_current_round, prompt=req.prompt, seed=None, timeout_s=int(req.timeout_s))
+        rr = await asyncio.to_thread(
+            orch.run_current_round,
+            prompt=req.prompt,
+            seed=None,
+            timeout_s=int(req.timeout_s),
+        )
     finally:
         if prev is None:
             os.environ.pop("CODEX_CLI_RAW", None)
@@ -113,12 +120,16 @@ async def chat_batch_route(req: ChatBatchRequest) -> ChatBatchResponse:
     import os
 
     if not req.variants:
-        raise HTTPException(status_code=400, detail="variants array is required and must be non-empty")
+        raise HTTPException(
+            status_code=400, detail="variants array is required and must be non-empty"
+        )
 
     for v in req.variants:
         prompt = v.prompt or req.prompt
         if not prompt:
-            raise HTTPException(status_code=400, detail="missing prompt (in variant and top-level)")
+            raise HTTPException(
+                status_code=400, detail="missing prompt (in variant and top-level)"
+            )
 
         # Build participant input
         bp = None
@@ -159,16 +170,18 @@ async def chat_batch_route(req: ChatBatchRequest) -> ChatBatchResponse:
         prev_dbg = os.environ.get("SEMHOST_CLI_DEBUG")
         prev_mcp = os.environ.get("ACTCLI_DISABLE_CLI_MCP")
         try:
-            if (v.raw if v.raw is not None else False):
+            if v.raw if v.raw is not None else False:
                 os.environ["CODEX_CLI_RAW"] = "1"
                 os.environ["SEMHOST_CLI_DEBUG"] = "true"
             else:
                 os.environ.pop("CODEX_CLI_RAW", None)
-            if (v.disable_tools if v.disable_tools is not None else True):
+            if v.disable_tools if v.disable_tools is not None else True:
                 os.environ["ACTCLI_DISABLE_CLI_MCP"] = "1"
 
             timeout_s = int(v.timeout_s or req.timeout_s)
-            rr = await asyncio.to_thread(orch.run_current_round, prompt=prompt, seed=None, timeout_s=timeout_s)
+            rr = await asyncio.to_thread(
+                orch.run_current_round, prompt=prompt, seed=None, timeout_s=timeout_s
+            )
         finally:
             if prev is None:
                 os.environ.pop("CODEX_CLI_RAW", None)

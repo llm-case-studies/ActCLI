@@ -11,4 +11,3 @@ def test_health_route_scaffold():
 @pytest.mark.skip(reason="Semhost routes to be implemented in Sprint 1")
 def test_models_route_scaffold():
     assert True
-

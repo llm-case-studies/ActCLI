@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Dict, List, Optional, Tuple
 
 from actcli.models.participant import ParticipantSpec, parse_participant_spec
@@ -19,7 +18,9 @@ def _to_spec(pi: ParticipantIn) -> ParticipantSpec:
         return parse_participant_spec(pi.spec, default_ollama_host=st.ollama_host)
     params: dict = {}
     if pi.bound_params is not None:
-        params = {k: v for k, v in pi.bound_params.model_dump(exclude_none=True).items()}
+        params = {
+            k: v for k, v in pi.bound_params.model_dump(exclude_none=True).items()
+        }
     return ParticipantSpec(
         alias=pi.alias,
         provider=str(pi.provider or "echo"),
@@ -29,20 +30,34 @@ def _to_spec(pi: ParticipantIn) -> ParticipantSpec:
     )
 
 
-def build_adapters(participants: List[ParticipantIn], *, allow_cloud: bool) -> Tuple[Dict[str, object], List[ParticipantOut]]:
+def build_adapters(
+    participants: List[ParticipantIn], *, allow_cloud: bool
+) -> Tuple[Dict[str, object], List[ParticipantOut]]:
     adapters: Dict[str, object] = {}
     outs: List[ParticipantOut] = []
     for pi in participants:
         spec = _to_spec(pi)
         adapter = AdapterFactory.from_spec(spec, allow_cloud=allow_cloud)
-        alias = spec.alias or getattr(adapter, "name", None) or spec.model_id or spec.provider
+        alias = (
+            spec.alias
+            or getattr(adapter, "name", None)
+            or spec.model_id
+            or spec.provider
+        )
         # Enforce cloud gating for CLI-backed too when allow_cloud is False
         if not allow_cloud and spec.provider not in ("ollama", "echo"):
-            adapter = BoundAdapter(EchoAdapter(name=f"{alias}(cloud-blocked)"), alias=str(alias))
+            adapter = BoundAdapter(
+                EchoAdapter(name=f"{alias}(cloud-blocked)"), alias=str(alias)
+            )
         adapters[str(alias)] = adapter
         bound = BoundParams(**spec.params) if spec.params else None
         outs.append(
-            ParticipantOut(alias=str(alias), provider=spec.provider, model_id=spec.model_id, bound_params=bound)
+            ParticipantOut(
+                alias=str(alias),
+                provider=spec.provider,
+                model_id=spec.model_id,
+                bound_params=bound,
+            )
         )
     return adapters, outs
 
@@ -58,9 +73,15 @@ class SessionWrapper:
     ) -> None:
         self.orchestrator = RoundOrchestrator(window_k=window_k, max_rounds=max_rounds)
         self.orchestrator.set_participants(adapters)
-        self._participants_meta: Dict[str, ParticipantOut] = {p.alias: p for p in participants_meta}
+        self._participants_meta: Dict[str, ParticipantOut] = {
+            p.alias: p for p in participants_meta
+        }
 
-    def set_participants(self, adapters: Dict[str, object], participants_meta: Optional[List[ParticipantOut]] = None) -> None:
+    def set_participants(
+        self,
+        adapters: Dict[str, object],
+        participants_meta: Optional[List[ParticipantOut]] = None,
+    ) -> None:
         self.orchestrator.set_participants(adapters)
         if participants_meta is not None:
             self._participants_meta = {p.alias: p for p in participants_meta}
@@ -84,10 +105,15 @@ class OrchestratorRegistry:
     def __init__(self) -> None:
         self._by_id: Dict[str, SessionWrapper] = {}
 
-    def create(self, *, adapters: Dict[str, object], window_k: int, max_rounds: Optional[int]) -> SessionWrapper:
+    def create(
+        self, *, adapters: Dict[str, object], window_k: int, max_rounds: Optional[int]
+    ) -> SessionWrapper:
         # Build a minimal participants meta from adapters only when build_adapters isn't used
         parts_meta = [
-            ParticipantOut(alias=a, provider="unknown", model_id=None, bound_params=None) for a in adapters.keys()
+            ParticipantOut(
+                alias=a, provider="unknown", model_id=None, bound_params=None
+            )
+            for a in adapters.keys()
         ]
         wrapper = SessionWrapper(
             adapters=adapters,

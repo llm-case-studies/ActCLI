@@ -18,6 +18,7 @@ Basic Flow
 - Pick Elements: Click input → send → history.
 - Validate: Simulates typing and send; observes history append.
 - Profiles: Stored per-origin via `chrome.storage.local`.
+ - MCP: Configure Semhost URL in popup and actions will POST to `/mcp/rpc` and briefly stream `/mcp/sse` to finalize jobs (events logged to `out/audit.json`).
 
 Playground
 - Start a static server or open the files directly:
@@ -29,6 +30,11 @@ Playground
 Selector Engine Tests (A2)
 - Open `tests/selectors.spec.html` in a browser. The page reports PASS/FAIL for core heuristics.
 - No dependencies; runs entirely client-side.
+
+Semhost Integration (A5)
+- Tools advertised: `participants.register`, `participants.message`, `events.log`.
+- Connect: Registers a participant with generated id and logs an event.
+- Validate: Logs an `events.log` record including whether a history append was observed.
 
 Notes
 - This is plain JS/HTML; no bundler required. Keep permissions minimal.

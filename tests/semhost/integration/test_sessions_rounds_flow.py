@@ -31,7 +31,9 @@ def test_sessions_create_start_next_with_echo_and_ws_events(tmp_path) -> None:
     # Connect to WS stream
     with client.websocket_connect(f"/sessions/{session_id}/stream") as ws:
         # Start the first round
-        r1 = client.post(f"/sessions/{session_id}/round/start", json={"prompt": "Hello world"})
+        r1 = client.post(
+            f"/sessions/{session_id}/round/start", json={"prompt": "Hello world"}
+        )
         assert r1.status_code == 200
         first = r1.json()
         assert first["index"] == 1
@@ -52,7 +54,9 @@ def test_sessions_create_start_next_with_echo_and_ws_events(tmp_path) -> None:
         assert evt["type"] == "artifacts_saved" and evt["index"] == 1
 
         # Start next round
-        r2 = client.post(f"/sessions/{session_id}/round/next", json={"prompt": "Continue"})
+        r2 = client.post(
+            f"/sessions/{session_id}/round/next", json={"prompt": "Continue"}
+        )
         assert r2.status_code == 200
         second = r2.json()
         assert second["index"] == 2
@@ -70,4 +74,3 @@ def test_sessions_create_start_next_with_echo_and_ws_events(tmp_path) -> None:
         assert evt["type"] == "round_end" and evt["index"] == 2
         evt = ws.receive_json()
         assert evt["type"] == "artifacts_saved" and evt["index"] == 2
-

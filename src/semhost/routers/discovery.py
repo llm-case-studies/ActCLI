@@ -17,7 +17,9 @@ router = APIRouter()
 
 @router.get("/providers/cli/discover")
 def providers_cli_discover(
-    provider: Literal["claude_cli", "codex_cli" ] = Query(..., description="CLI provider"),
+    provider: Literal["claude_cli", "codex_cli"] = Query(
+        ..., description="CLI provider"
+    ),
     raw: bool = Query(False, description="Include raw menu output when available"),
 ) -> dict:
     if provider == "claude_cli":
@@ -41,18 +43,25 @@ def providers_cli_discover(
 
 @router.get("/providers/cli/help")
 def providers_cli_help(
-    provider: Literal["claude_cli", "codex_cli", "gemini_cli"] = Query(..., description="CLI provider"),
+    provider: Literal["claude_cli", "codex_cli", "gemini_cli"] = Query(
+        ..., description="CLI provider"
+    ),
 ) -> dict:
     import subprocess
+
     bin_map = {"claude_cli": "claude", "codex_cli": "codex", "gemini_cli": "gemini"}
     cmd = bin_map.get(provider)
     if not cmd or not shutil.which(cmd):
         raise HTTPException(status_code=400, detail=f"binary not found for {provider}")
     try:
         p = subprocess.run([cmd, "--help"], capture_output=True, text=True, timeout=6)
-        out = (p.stdout or "")
-        err = (p.stderr or "")
-        return {"provider": provider, "ok": p.returncode == 0, "stdout": out, "stderr": err}
+        out = p.stdout or ""
+        err = p.stderr or ""
+        return {
+            "provider": provider,
+            "ok": p.returncode == 0,
+            "stdout": out,
+            "stderr": err,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

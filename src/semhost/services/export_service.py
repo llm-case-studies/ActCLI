@@ -69,9 +69,10 @@ def export_conversation(
         bus = get_event_bus()
         import asyncio
 
-        asyncio.get_event_loop().create_task(bus.emit(session_id, "export_saved", {"path": str(out_md)}))
+        asyncio.get_event_loop().create_task(
+            bus.emit(session_id, "export_saved", {"path": str(out_md)})
+        )
     except Exception:
         pass
 
     return out_md
-

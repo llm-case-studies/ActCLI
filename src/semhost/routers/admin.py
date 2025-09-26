@@ -18,6 +18,7 @@ def _deferred_sigterm(delay_s: float = 0.2) -> None:
         except Exception:
             # Last resort: hard exit
             os._exit(0)
+
     t = threading.Thread(target=_go, daemon=True)
     t.start()
 
@@ -43,5 +44,8 @@ def admin_restart_route() -> dict:
     behaves like shutdown and you should start the server again.
     """
     _deferred_sigterm()
-    return {"ok": True, "action": "restart", "note": "If supervised, it will restart; else it stops."}
-
+    return {
+        "ok": True,
+        "action": "restart",
+        "note": "If supervised, it will restart; else it stops.",
+    }

@@ -26,6 +26,6 @@ class ModelItem(BaseModel):
     description: Optional[str] = None
     hint: Optional[str] = None
     # Back-compat alias (derived from policy/auth); will be deprecated
-    blocked_reason: Optional[Literal["offline", "cloud_share_disabled", "missing_key", "cli_missing"]] = Field(
-        default=None
-    )
+    blocked_reason: Optional[
+        Literal["offline", "cloud_share_disabled", "missing_key", "cli_missing"]
+    ] = Field(default=None)

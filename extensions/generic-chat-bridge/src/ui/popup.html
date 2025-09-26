@@ -13,10 +13,16 @@
       .small { color: #475569; font-size: 12px; }
       #status { margin-top: 8px; color: #334155; }
       code { background: #e2e8f0; padding: 1px 3px; border-radius: 4px; }
+      input[type="text"] { padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; }
     </style>
   </head>
   <body>
     <header>ActCLI Web Chat Bridge</header>
+    <div class="row">
+      <div class="small">Semhost URL</div>
+      <input type="text" id="semhost" placeholder="http://127.0.0.1:7530" />
+      <button id="saveCfg">Save</button>
+    </div>
     <div class="row">
       <button id="pick" class="primary">Pick Elements</button>
       <button id="validate">Validate</button>
@@ -27,6 +33,9 @@
       <button id="disconnect">Disconnect</button>
     </div>
     <div class="row">
+      <input type="text" id="testText" placeholder="Test message (Validate uses this)" />
+    </div>
+    <div class="row">
       <button id="export">Export Profile</button>
       <button id="import">Import Profile</button>
     </div>
@@ -35,13 +44,26 @@
       function originKeyFromUrl(url) { try { return new URL(url).origin; } catch { return null; } }
       async function getActiveTab() { const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); return tab; }
       function setStatus(text) { document.getElementById('status').textContent = text; }
+      // Load config
+      (async () => {
+        try {
+          const r = await chrome.runtime.sendMessage({ type: 'config.get' });
+          document.getElementById('semhost').value = r?.config?.semhostUrl || 'http://127.0.0.1:7530';
+        } catch {}
+      })();
+      document.getElementById('saveCfg').addEventListener('click', async () => {
+        const semhostUrl = document.getElementById('semhost').value.trim();
+        await chrome.runtime.sendMessage({ type: 'config.set', config: { semhostUrl } });
+        setStatus('Saved Semhost URL');
+      });
       document.getElementById('pick').addEventListener('click', async () => {
         setStatus('Picking: click Input → Send → History');
         await chrome.runtime.sendMessage({ type: 'bridge.pickStart' });
       });
       document.getElementById('validate').addEventListener('click', async () => {
         setStatus('Validating…');
-        const r = await chrome.runtime.sendMessage({ type: 'bridge.validate', text: 'Hello from ActCLI' });
+        const text = document.getElementById('testText').value || 'Hello from ActCLI';
+        const r = await chrome.runtime.sendMessage({ type: 'bridge.validate', text });
         if (r?.ok) setStatus('Validate: OK' + (r.observed ? ' (observed history append)' : ''));
         else setStatus('Validate failed: ' + (r?.error || 'unknown'));
       });
