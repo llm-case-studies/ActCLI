@@ -177,10 +177,63 @@ function computeSelector(el) {
   return parts.join('>');
 }
 
-const _overlay = new PickerOverlay();
+// Avoid redeclaration errors in frames/repeated injections
+if (!window.__actcliOverlay) {
+  const _overlay = new PickerOverlay();
 
-// Expose globals for non-module content script usage
-// eslint-disable-next-line no-undef
-window.__actcliOverlay = _overlay;
-// eslint-disable-next-line no-undef
-window.__actcliComputeSelector = computeSelector;
+  // Expose globals for non-module content script usage
+  window.__actcliOverlay = _overlay;
+  window.__actcliComputeSelector = computeSelector;
+
+  // Create the main bridge API that the tests will use
+  let messageId = 0;
+  const pendingMessages = new Map();
+
+  // Listen for responses from isolated world
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || !event.data || event.data.source !== '__actcli_isolated_to_main') {
+      return;
+    }
+
+    const { id, result, error } = event.data;
+    const pending = pendingMessages.get(id);
+    if (pending) {
+      pendingMessages.delete(id);
+      if (error) {
+        pending.reject(new Error(error));
+      } else {
+        pending.resolve(result);
+      }
+    }
+  });
+
+  // Helper to send messages to isolated world
+  function sendToIsolated(method, params) {
+    return new Promise((resolve, reject) => {
+      const id = ++messageId;
+      pendingMessages.set(id, { resolve, reject });
+
+      window.postMessage({
+        source: '__actcli_main_to_isolated',
+        method,
+        params,
+        id
+      }, '*');
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (pendingMessages.has(id)) {
+          pendingMessages.delete(id);
+          reject(new Error('timeout'));
+        }
+      }, 10000);
+    });
+  }
+
+  // Expose the main bridge API
+  window.__actcli_bridge = {
+    computeSelector,
+    pick: () => _overlay.start(),
+    validate: (text) => sendToIsolated('validate', { text })
+  };
+}

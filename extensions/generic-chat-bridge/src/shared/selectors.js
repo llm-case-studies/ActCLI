@@ -142,11 +142,19 @@
     return best;
   }
 
+  // computeSelector function used by overlay.js
+  function computeSelector(el) {
+    return pickBestSelector(el, 'generic');
+  }
+
   const api = {
-    scoreCandidate, pickBestSelector, findBest,
+    scoreCandidate, pickBestSelector, findBest, computeSelector,
     _internals: { idSelector, dataSelector, roleSelector, prunedPath, isInputCandidate, isSendCandidate, isHistoryCandidate }
   };
-  // Expose globally for content scripts and tests
-  window.__actcliSelectors = api;
+  // Expose globally for content scripts and tests - avoid redeclaration
+  if (!window.__actcliSelectors) {
+    window.__actcliSelectors = api;
+    window.__actcliComputeSelector = computeSelector;
+  }
 })();
 

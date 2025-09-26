@@ -18,8 +18,14 @@ test.describe('BrExt • Playground E2E (Learn→Validate→Re-learn)', () => {
       ],
     });
     const page = await context.newPage();
-    await page.goto(`${BASE_URL}/textarea.html`);
 
+    // Listen for console messages and errors
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+
+    await page.goto(`${BASE_URL}/textarea.html`);
+    // Wait for content scripts to load and API to be ready
+    await page.waitForFunction(() => Boolean((window as any).__actcli_bridge && (window as any).__actcli_bridge.pick), { timeout: 10000 });
     // Start picking via exposed debug API
     await page.evaluate(() => (window as any).__actcli_bridge.pick());
     await page.click('#composer');
@@ -51,6 +57,7 @@ test.describe('BrExt • Playground E2E (Learn→Validate→Re-learn)', () => {
     });
     const page = await context.newPage();
     await page.goto(`${BASE_URL}/contenteditable.html`);
+    await page.waitForFunction(() => Boolean((window as any).__actcli_bridge && (window as any).__actcli_bridge.pick));
     await page.evaluate(() => (window as any).__actcli_bridge.pick());
     await page.click('[role="textbox"]');
     await page.click('#send');
@@ -61,4 +68,3 @@ test.describe('BrExt • Playground E2E (Learn→Validate→Re-learn)', () => {
     await context.close();
   });
 });
-
