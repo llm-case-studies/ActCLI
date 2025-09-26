@@ -36,6 +36,20 @@ Semhost Integration (A5)
 - Connect: Registers a participant with generated id and logs an event.
 - Validate: Logs an `events.log` record including whether a history append was observed.
 
+Playwright Tips (PW Mastery)
+- Always use a persistent Chromium context to load MV3 extensions; keep `headless: false`.
+- Serve Playground via HTTP (not file://): `python -m http.server 4400` → `http://127.0.0.1:4400`.
+- Set `EXTENSION_PATH` to the absolute path of this folder (contains `manifest.json`).
+- Wait for the MAIN‑world debug API before interacting:
+  - `await page.waitForFunction(() => Boolean(window.__actcli_bridge?.pick))`.
+- Prefer driving flows via the MAIN‑world debug API to avoid popup interactions.
+- For iframes, use `frameLocator` and call the API in the frame’s page context.
+- Capture console/page errors to accelerate debugging:
+  - `page.on('console', ...)` and `page.on('pageerror', ...)`.
+- If environments are slow, bump timeout: `--timeout=60000` or per‑step waits.
+- Clear stale profiles: delete `.pw-chrome-profile*` in `tests/e2e/` before re‑runs.
+- See `tests/e2e/README.md` for full troubleshooting and examples.
+
 Notes
 - This is plain JS/HTML; no bundler required. Keep permissions minimal.
 - The code intentionally avoids background automation and respects human-paced usage.
