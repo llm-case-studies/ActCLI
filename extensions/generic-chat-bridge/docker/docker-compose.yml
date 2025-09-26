@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:6.8
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - ROOT_URL=http://localhost:3000
+      - MONGO_URL=mongodb://mongo:27017/rocketchat
+      - MONGO_OPLOG_URL=mongodb://mongo:27017/local
+    ports:
+      - '3000:3000'
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    command: mongod --oplogSize 128 --replSet rs0
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongo --quiet) -eq 1
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  zulip:
+    image: zulip/docker-zulip:7.4-0
+    restart: unless-stopped
+    environment:
+      - DB_HOST=zulip_db
+      - SETTING_EXTERNAL_HOST=localhost
+    ports:
+      - '9991:9991'
+    depends_on:
+      - zulip_db
+
+  zulip_db:
+    image: docker.io/zulip/zulip-postgresql:16
+    environment:
+      - POSTGRES_USER=zulip
+      - POSTGRES_PASSWORD=zulip
+      - POSTGRES_DB=zulip
+    volumes:
+      - zulip-db:/var/lib/postgresql/data
+
+volumes:
+  mongo-data: {}
+  zulip-db: {}
+

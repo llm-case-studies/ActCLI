@@ -35,6 +35,38 @@ async function postBackground(msg) {
   return await chrome.runtime.sendMessage(msg);
 }
 
+async function validateTextInternal(text) {
+  const origin = getOrigin();
+  const res = await postBackground({ type: 'bridge.getProfile', origin });
+  const prof = res?.profile;
+  if (!prof || !prof.input || !prof.send || !prof.history) {
+    return { ok: false, error: 'no-profile' };
+  }
+  const inputEl = selectEl(prof.input);
+  const sendEl = selectEl(prof.send);
+  const histEl = selectEl(prof.history);
+  if (!inputEl || !sendEl || !histEl) {
+    return { ok: false, error: 'elements-not-found' };
+  }
+  try {
+    inputEl.focus();
+    const before = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
+    inputEl.dispatchEvent(before);
+    if ('value' in inputEl) { inputEl.value = (inputEl.value || '') + text; }
+    const after = new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
+    inputEl.dispatchEvent(after);
+  } catch (e) {
+    try { document.execCommand('insertText', false, text); } catch (_) {}
+  }
+  if (runningObserver) { try { runningObserver.disconnect(); } catch {} }
+  let observed = '';
+  runningObserver = observeHistory(prof.history, (t) => { observed = t; });
+  sendEl.click();
+  await new Promise(r => setTimeout(r, 800));
+  try { runningObserver && runningObserver.disconnect(); } catch {}
+  return { ok: true, observed: observed || null };
+}
+
 // Picker → receive selections via window.postMessage from overlay
 window.addEventListener('message', async (ev) => {
   const data = ev.data;
@@ -75,43 +107,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
     if (msg?.type === 'content.validate') {
       const { text } = msg;
-      const origin = getOrigin();
-      const res = await postBackground({ type: 'bridge.getProfile', origin });
-      const prof = res?.profile;
-      if (!prof || !prof.input || !prof.send || !prof.history) {
-        sendResponse({ ok: false, error: 'no-profile' });
-        return;
-      }
-      const inputEl = selectEl(prof.input);
-      const sendEl = selectEl(prof.send);
-      const histEl = selectEl(prof.history);
-      if (!inputEl || !sendEl || !histEl) {
-        sendResponse({ ok: false, error: 'elements-not-found' });
-        return;
-      }
-      // Simulate typing using events to support contenteditable
-      try {
-        inputEl.focus();
-        const before = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
-        inputEl.dispatchEvent(before);
-        if ('value' in inputEl) { inputEl.value = (inputEl.value || '') + text; }
-        const after = new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
-        inputEl.dispatchEvent(after);
-      } catch (e) {
-        // fall back to execCommand for contenteditable if available
-        try { document.execCommand('insertText', false, text); } catch (_) {}
-      }
-      // Observe history appends briefly to validate roundtrip
-      if (runningObserver) { try { runningObserver.disconnect(); } catch {} }
-      let observed = '';
-      runningObserver = observeHistory(prof.history, (t) => { observed = t; });
-      // Click send
-      sendEl.click();
-      // Wait a bit and report
-      setTimeout(() => {
-        try { runningObserver && runningObserver.disconnect(); } catch {}
-        sendResponse({ ok: true, observed: observed || null });
-      }, 800);
+      const r = await validateTextInternal(text);
+      sendResponse(r);
       return;
     }
   })();
@@ -122,4 +119,5 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 window.__actcli_bridge = {
   computeSelector,
   pick: () => _overlay.start(),
+  validate: (text) => validateTextInternal(text),
 };
