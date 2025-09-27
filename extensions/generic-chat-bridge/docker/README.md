@@ -27,6 +27,7 @@ Seeding (Rocket.Chat)
 - Seed users/channel via REST:
   - From this folder: `node seed-rocketchat.mjs`
   - Creates `alice` and `bob`, channel `#e2e`, invites users, posts a welcome message
+  - Optional: set `RC_USERS=carol:carol@local:carolpass,dave:dave@local:davepass` to create/invite additional users automatically
 
 Playwright UI Spin (optional)
 - In tests/e2e:

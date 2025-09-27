@@ -34,17 +34,26 @@ async function postBackground(msg) {
   return await chrome.runtime.sendMessage(msg);
 }
 
+async function saveProfile(profile) {
+  currentProfile = { ...(currentProfile || {}), ...profile };
+  const origin = getOrigin();
+  await postBackground({ type: 'bridge.saveProfile', origin, profile: currentProfile });
+  return currentProfile;
+}
+
 async function validateTextInternal(text) {
   const origin = getOrigin();
   const res = await postBackground({ type: 'bridge.getProfile', origin });
   const prof = res?.profile;
-  if (!prof || !prof.input || !prof.send || !prof.history) {
+  if (!prof || !prof.input || !prof.history) {
     return { ok: false, error: 'no-profile' };
   }
   const inputEl = selectEl(prof.input);
-  const sendEl = selectEl(prof.send);
+  const sendSpec = prof.send || '__KEY:Enter__';
+  const isKeySpec = typeof sendSpec === 'string' && sendSpec.startsWith('__KEY:');
+  const sendEl = !isKeySpec && sendSpec !== '__ENTER__' ? selectEl(sendSpec) : null;
   const histEl = selectEl(prof.history);
-  if (!inputEl || !sendEl || !histEl) {
+  if (!inputEl || !histEl) {
     return { ok: false, error: 'elements-not-found' };
   }
   try {
@@ -69,7 +78,36 @@ async function validateTextInternal(text) {
   if (runningObserver) { try { runningObserver.disconnect(); } catch {} }
   let observed = '';
   runningObserver = observeHistory(prof.history, (t) => { observed = t; });
-  sendEl.click();
+  // Submit via explicit send button or keyboard combo
+  try {
+    if (sendEl) {
+      sendEl.click();
+    } else {
+      let key = 'Enter';
+      let ctrlKey = false, metaKey = false, altKey = false, shiftKey = false;
+      if (isKeySpec) {
+        const spec = String(sendSpec).slice('__KEY:'.length, -2); // remove prefix and trailing __
+        const parts = spec.split('+');
+        key = parts[parts.length - 1] || 'Enter';
+        for (let i = 0; i < parts.length - 1; i++) {
+          const p = parts[i].toLowerCase();
+          if (p === 'ctrl' || p === 'control') ctrlKey = true;
+          if (p === 'meta' || p === 'cmd' || p === 'command') metaKey = true;
+          if (p === 'alt' || p === 'option') altKey = true;
+          if (p === 'shift') shiftKey = true;
+        }
+      }
+      const kd = new KeyboardEvent('keydown', { key, code: key, bubbles: true, ctrlKey, metaKey, altKey, shiftKey });
+      const ku = new KeyboardEvent('keyup', { key, code: key, bubbles: true, ctrlKey, metaKey, altKey, shiftKey });
+      inputEl.dispatchEvent(kd);
+      inputEl.dispatchEvent(ku);
+      // Fallback: submit nearest form if present
+      const form = inputEl.closest && inputEl.closest('form');
+      if (form && typeof form.submit === 'function') {
+        try { form.submit(); } catch {}
+      }
+    }
+  } catch {}
   await new Promise(r => setTimeout(r, 800));
   try { runningObserver && runningObserver.disconnect(); } catch {}
   return { ok: true, observed: observed || null };
@@ -81,14 +119,10 @@ window.addEventListener('message', async (ev) => {
   if (!data || data.__actcli_pick !== true) return;
   if (!currentProfile) currentProfile = {};
   if (data.stage === 'input') currentProfile.input = data.selector;
-  if (data.stage === 'send') currentProfile.send = data.selector;
+  if (data.stage === 'send') currentProfile.send = data.selector || '__ENTER__';
   if (data.stage === 'history') currentProfile.history = data.selector;
-  if (currentProfile.input && currentProfile.send && currentProfile.history) {
-    // Persist to background (per-origin)
-    await postBackground({ type: 'bridge.saveProfile', origin: getOrigin(), profile: currentProfile });
-    // Notify popup for UX (optional)
-    // no-op: popup can pull via bridge.getProfile
-  }
+  // Persist incrementally so popup can reflect mapping progress
+  await saveProfile(currentProfile);
 });
 
 // Handle messages from background/popup
@@ -107,9 +141,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const prof = res?.profile;
       if (!prof) { sendResponse({ ok: false, error: 'no-profile' }); return; }
       const inputEl = selectEl(prof.input);
-      const sendEl = selectEl(prof.send);
+      const sendEl = prof.send && prof.send !== '__ENTER__' ? selectEl(prof.send) : null;
       const histEl = selectEl(prof.history);
-      const ok = !!(inputEl && sendEl && histEl);
+      const ok = !!(inputEl && histEl); // send is optional (Enter to submit)
       sendResponse({ ok });
       return;
     }
@@ -117,6 +151,40 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const { text } = msg;
       const r = await validateTextInternal(text);
       sendResponse(r);
+      return;
+    }
+    if (msg?.type === 'content.injectProfile') {
+      const prof = msg.profile || {};
+      await saveProfile(prof);
+      sendResponse({ ok: true, profile: currentProfile });
+      return;
+    }
+    if (msg?.type === 'content.autoMap') {
+      // Heuristic:
+      // - Input: find best textbox/search field
+      // - History: pick common containers (#search, #rso, role=main/list, aria-live)
+      // - Send: use Enter by default
+      let inputSel = null, historySel = null;
+      try {
+        const elIn = (window.__actcliSelectors?.findBest?.(document, 'input')) ||
+          document.querySelector('input[type="search"], input[name="q"], textarea, [role="textbox"], [contenteditable="true"]');
+        if (elIn) {
+          inputSel = window.__actcliSelectors?.pickBestSelector?.(elIn, 'input') || (elIn.id ? `#${elIn.id}` : null);
+        }
+      } catch {}
+      try {
+        const histCand = document.querySelector('#search, #rso, [role="main"], [role="list"], [aria-live], [aria-label*="results" i]');
+        if (histCand) {
+          historySel = window.__actcliSelectors?.pickBestSelector?.(histCand, 'history') || (histCand.id ? `#${histCand.id}` : null);
+        }
+      } catch {}
+      if (!inputSel || !historySel) {
+        sendResponse({ ok: false, error: 'auto-map-failed' });
+        return;
+      }
+      const prof = { input: inputSel, send: '__ENTER__', history: historySel };
+      await saveProfile(prof);
+      sendResponse({ ok: true, profile: prof });
       return;
     }
   })();

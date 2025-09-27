@@ -74,16 +74,17 @@ class PickerOverlay {
     if (!t || t === this._root) return;
     this._lastTarget = t;
     const r = t.getBoundingClientRect();
+    // Use fixed positioning (viewport coords). Do NOT add scroll offsets.
     Object.assign(this._highlight.style, {
-      left: `${r.left + window.scrollX}px`,
-      top: `${r.top + window.scrollY}px`,
+      left: `${r.left}px`,
+      top: `${r.top}px`,
       width: `${r.width}px`,
       height: `${r.height}px`,
       display: 'block'
     });
     Object.assign(this._tooltip.style, {
-      left: `${r.left + window.scrollX + 4}px`,
-      top: `${r.top + window.scrollY - 22}px`,
+      left: `${r.left + 4}px`,
+      top: `${Math.max(4, r.top - 22)}px`,
       display: 'block'
     });
   }
@@ -115,7 +116,11 @@ class PickerOverlay {
       this.stop();
     } else {
       this._stage = nextStage;
-      this._setTip(`Pick: ${this._stage}`);
+      this._setTip(
+        this._stage === 'send'
+          ? 'Pick: send (press key to use keyboard submit, or click a button)'
+          : `Pick: ${this._stage}`
+      );
     }
   }
 
@@ -126,6 +131,22 @@ class PickerOverlay {
       ev.preventDefault();
       this.stop();
       window.postMessage({ __actcli_pick: true, stage: 'cancel' }, '*');
+      return;
+    }
+    // Capture keyboard-based submit at the Send stage (e.g., Enter, Ctrl+Enter)
+    if (this._stage === 'send') {
+      ev.stopPropagation();
+      ev.preventDefault();
+      const mods = [];
+      if (ev.ctrlKey) mods.push('Ctrl');
+      if (ev.metaKey) mods.push('Meta');
+      if (ev.altKey) mods.push('Alt');
+      if (ev.shiftKey) mods.push('Shift');
+      const key = ev.key || 'Enter';
+      const combo = mods.length ? `${mods.join('+')}+${key}` : key;
+      window.postMessage({ __actcli_pick: true, stage: 'send', selector: `__KEY:${combo}__` }, '*');
+      this._stage = 'history';
+      this._setTip('Pick: history');
     }
   }
 }

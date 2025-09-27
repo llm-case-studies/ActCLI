@@ -16,6 +16,20 @@ const U2 = process.env.RC_USER2 || 'bob';
 const U2_EMAIL = process.env.RC_USER2_EMAIL || 'bob@local';
 const U2_PASS = process.env.RC_USER2_PASS || 'bobpass';
 const CHANNEL = process.env.RC_CHANNEL || 'e2e';
+// Optional extra users list: "username:email:password,username2:email2:password2"
+const RC_USERS = (process.env.RC_USERS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
+  .map(s => {
+    const parts = s.split(':');
+    if (parts.length < 3) {
+      console.warn('RC_USERS entry missing fields (username:email:password):', s);
+      return null;
+    }
+    return { username: parts[0], email: parts[1], password: parts[2] };
+  })
+  .filter(Boolean);
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -105,14 +119,19 @@ async function main(){
   console.log('Ensuring users…');
   await ensureUser(auth, U1, U1_EMAIL, U1_PASS);
   await ensureUser(auth, U2, U2_EMAIL, U2_PASS);
+  if (RC_USERS.length) {
+    for (const u of RC_USERS) {
+      await ensureUser(auth, u.username, u.email, u.password);
+    }
+  }
   console.log('Ensuring channel…');
   const rid = await ensureChannel(auth, CHANNEL);
   console.log('Inviting users…');
-  await invite(auth, rid, [U1, U2]);
+  const invitees = [U1, U2, ...RC_USERS.map(u => u.username)];
+  await invite(auth, rid, invitees);
   console.log('Posting welcome message…');
   await post(auth, rid, 'Welcome to #'+CHANNEL+' (seeded)');
   console.log('Done.');
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
-

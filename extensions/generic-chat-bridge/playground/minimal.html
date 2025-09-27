@@ -3,12 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Playground: Contenteditable</title>
+    <title>Playground: Minimal</title>
     <style>
       body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background:#0b0c10; color:#e5e7eb; }
-      .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-      .ce { min-height: 100px; padding: 10px; border: 1px solid #1f2937; border-radius: 8px; background:#111827; }
-      button { padding: 6px 12px; }
+      .ce { min-height: 80px; padding: 10px; border: 1px solid #1f2937; border-radius: 8px; background:#111827; }
       #history { margin-top: 16px; border-top: 1px solid #1f2937; padding-top: 12px; }
       .msg { padding: 6px 8px; background: #111827; border: 1px solid #1f2937; border-radius: 6px; margin-bottom: 8px; }
       .muted { color:#9ca3af; font-size:12px; }
@@ -16,19 +14,15 @@
     </style>
   </head>
   <body>
-    <h3>Playground: Contenteditable</h3>
+    <h3>Playground: Minimal (input only)</h3>
     <div class="muted" style="margin-bottom:8px">
-      Enter sends • Shift+Enter adds newline.
+      No send button • Enter sends • Shift+Enter inserts newline.
       <label style="margin-left:12px"><input type="checkbox" id="simulate" /> Simulate replies</label>
     </div>
-    <div class="row">
-      <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message"></div>
-      <button id="send">Send</button>
-    </div>
+    <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message" placeholder="Type a message…"></div>
     <div id="history" aria-label="history" role="list"></div>
     <script>
       const composer = document.getElementById('composer');
-      const send = document.getElementById('send');
       const simulate = document.getElementById('simulate');
       const history = document.getElementById('history');
       function getText() { return composer.innerText.trim(); }
@@ -48,10 +42,10 @@
           setTimeout(() => addMsg(`You said "${txt}" — what do you mean?`), 400);
         }
       }
-      send.addEventListener('click', doSend);
       composer.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
       });
     </script>
   </body>
   </html>
+

@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground: Preply-like (board + chat)</title>
+    <style>
+      :root { --bg:#0b0c10; --panel:#0f172a; --muted:#9ca3af; --border:#1f2937; --accent:#06b6d4; --text:#e5e7eb; --bubble:#111827; --out:#0b3d3a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background: var(--bg); color: var(--text); }
+      header { background: var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding: 10px 12px; }
+      .title { font-weight:600; }
+      .muted { color: var(--muted); font-size:12px; }
+      .wrap { display: grid; grid-template-columns: 2fr 1fr; height: calc(100vh - 52px); }
+      .board { border-right:1px solid var(--border); display:grid; grid-template-rows: 44px 1fr; }
+      .board-tools { background:#0e1621; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; padding: 6px 10px; }
+      .tool { border:1px solid var(--border); border-radius:6px; padding:4px 8px; background:#0f172a; color:#a7f3d0; cursor:pointer; }
+      #canvas { background:#0a0f14; cursor: crosshair; }
+      .chat { display:grid; grid-template-rows: 44px 1fr 82px; }
+      .chat-head { background:#0e1621; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; padding: 8px 10px; }
+      #history { overflow:auto; padding: 12px; }
+      .message { margin:6px 0; display:flex; }
+      .bubble { background: var(--bubble); border:1px solid var(--border); border-radius: 10px; padding: 8px 10px; max-width:85%; }
+      .outgoing { justify-content: flex-end; }
+      .outgoing .bubble { background:#0e2f2e; }
+      .composer { background: var(--panel); border-top:1px solid var(--border); display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:10px; }
+      .btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius: 50%; border:1px solid var(--border); background:#0f172a; color:#a7f3d0; cursor:pointer; }
+      .ce { min-height: 52px; max-height: 120px; overflow:auto; padding: 8px; border:1px solid var(--border); border-radius: 10px; background:#111827; }
+      label { user-select: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Preply-like Session</div>
+      <div class="muted">Left: board • Right: chat</div>
+      <label style="margin-left:12px"><input type="checkbox" id="simulate"/> Simulate replies</label>
+    </header>
+    <div class="wrap">
+      <section class="board" aria-label="board">
+        <div class="board-tools">
+          <button id="pen" class="tool" aria-label="Pen">✏️ Pen</button>
+          <button id="erase" class="tool" aria-label="Eraser">🧽 Erase</button>
+          <span class="muted" style="margin-left:auto">Draw on the board</span>
+        </div>
+        <canvas id="canvas" width="1200" height="800"></canvas>
+      </section>
+      <section class="chat" aria-label="chat">
+        <div class="chat-head">
+          <div class="title">Chat</div>
+          <div class="muted">Enter sends • Shift+Enter newline</div>
+        </div>
+        <div id="history" role="list" aria-label="history">
+          <div class="message incoming" role="listitem"><div class="bubble">Bem-vindo! Vamos discutir Pareto hoje?</div></div>
+        </div>
+        <div class="composer">
+          <div class="btn" title="Attach">📎</div>
+          <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message" data-qa="preply-input"></div>
+          <div id="sendBtn" class="btn" title="Send" aria-label="Send">➤</div>
+        </div>
+      </section>
+    </div>
+    <script>
+      // Chat behavior
+      const historyEl = document.getElementById('history');
+      const composer = document.getElementById('composer');
+      const sendBtn = document.getElementById('sendBtn');
+      const simulate = document.getElementById('simulate');
+      function addMsg(text, out=false){
+        const m = document.createElement('div'); m.className = 'message ' + (out? 'outgoing':'incoming'); m.setAttribute('role','listitem');
+        const b = document.createElement('div'); b.className='bubble'; b.textContent = text; m.appendChild(b);
+        historyEl.appendChild(m); historyEl.scrollTop = historyEl.scrollHeight;
+      }
+      function text(){ return composer.innerText.trim(); }
+      function clear(){ composer.innerText=''; }
+      function send(){ const t=text(); if(!t) return; addMsg(t, true); clear(); if (simulate.checked) setTimeout(()=> addMsg(`Você disse "${t}" — o que você quer dizer?`), 480); }
+      composer.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+      sendBtn.addEventListener('click', send);
+
+      // Board drawing
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      let drawing = false; let erasing = false; let last = null;
+      function pos(e){ const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+      function drawLine(a,b){ ctx.strokeStyle = erasing? '#0a0f14' : '#a7f3d0'; ctx.lineWidth = erasing? 18 : 3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+      canvas.addEventListener('mousedown', (e)=>{ drawing = true; last = pos(e); });
+      canvas.addEventListener('mousemove', (e)=>{ if(!drawing) return; const p = pos(e); drawLine(last,p); last = p; });
+      window.addEventListener('mouseup', ()=>{ drawing=false; last=null; });
+      document.getElementById('pen').addEventListener('click', ()=> erasing=false);
+      document.getElementById('erase').addEventListener('click', ()=> erasing=true);
+    </script>
+  </body>
+  </html>
+
