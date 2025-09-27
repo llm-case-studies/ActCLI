@@ -9,6 +9,7 @@ Prereqs
 Run Locally
 1) Set env: `export EXTENSION_PATH=$(pwd)` (the extension root)
 2) In this folder: `npx playwright test -c playwright.config.ts`
+3) Optional Docker readiness: `RUN_OSS=1 npx playwright test -c playwright.config.ts docker-readiness.spec.ts`
 
 What Tests Do
 - Launch Chromium with the extension loaded (MV3)
@@ -26,6 +27,7 @@ Notes
 - Tests use a persistent context to allow MV3 extension loading.
 - Popup not used; we drive content script helper `window.__actcli_bridge`.
 - For virtualized/iframe cases, copy/extend the existing test patterns.
+ - To run Docker OSS targets, start services in `extensions/generic-chat-bridge/docker/` with `docker compose up -d`.
 
 Troubleshooting (PW)
 - Extension not loading / globals undefined:
