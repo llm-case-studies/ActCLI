@@ -21,3 +21,15 @@ Caution
 - Images are large; not suitable for minimal CI unless cached.
 - Security not hardened; dev-only usage.
 
+Seeding (Rocket.Chat)
+- Copy `.env.example` to `.env` and review credentials (or export env vars)
+- Ensure admin exists (first run requires creating an admin via web UI)
+- Seed users/channel via REST:
+  - From this folder: `node seed-rocketchat.mjs`
+  - Creates `alice` and `bob`, channel `#e2e`, invites users, posts a welcome message
+
+Playwright UI Spin (optional)
+- In tests/e2e:
+  - `export EXTENSION_PATH=$(realpath ../../)`
+  - `RUN_OSS=1 npx playwright test -c playwright.config.ts rocketchat-ui.spec.ts`
+- The test logs in as `alice`, opens `#e2e`, learns selectors via overlay, validates sending a test message.
