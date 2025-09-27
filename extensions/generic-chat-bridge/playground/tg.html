@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground: Telegram-like</title>
+    <style>
+      :root { --bg:#17212b; --panel:#0e1621; --muted:#a0b3c6; --border:#1f2937; --accent:#2ea6ff; --text:#e5e7eb; --bubble:#1f2a36; --out:#2b5278; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background: var(--bg); color: var(--text); }
+      .app { display: grid; grid-template-rows: 56px 1fr 72px; height: 100vh; }
+      header { background: var(--panel); border-bottom: 1px solid #0f172a; display:flex; align-items:center; gap:12px; padding: 0 12px; }
+      .title { font-weight:600; }
+      #history { overflow:auto; padding: 12px; }
+      .message { display:flex; margin: 6px 0; }
+      .bubble { max-width: 66%; padding: 8px 10px; border-radius: 10px; background: var(--bubble); }
+      .incoming .bubble { border-top-left-radius: 3px; }
+      .outgoing { justify-content: flex-end; }
+      .outgoing .bubble { background: var(--out); border-top-right-radius: 3px; }
+      .composer { background: var(--panel); border-top: 1px solid #0f172a; display:grid; grid-template-columns: auto 1fr auto; gap:8px; align-items:center; padding: 10px; }
+      .ce { min-height: 44px; max-height: 110px; overflow:auto; padding: 8px; border:1px solid #0f172a; border-radius: 10px; background:#111827; }
+      .btn { padding: 6px 10px; border:1px solid #0f172a; border-radius:6px; background:#0f172a; color:#a7f3d0; cursor:pointer; }
+      .muted { color: var(--muted); font-size:12px; }
+      label { user-select: none; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="title">TG-like Chat</div>
+        <div class="muted" style="margin-left:8px">Enter sends • Shift+Enter newline • No send icon (Enter-focused)</div>
+        <label style="margin-left:auto; margin-right:8px"><input type="checkbox" id="simulate"/> Simulate replies</label>
+      </header>
+      <div id="history" role="log" aria-label="history"></div>
+      <div class="composer">
+        <button id="attach" class="btn" aria-label="Attach">📎</button>
+        <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message" data-qa="tg-input"></div>
+        <button id="emoji" class="btn" aria-label="Emoji">😊</button>
+      </div>
+    </div>
+    <script>
+      const history = document.getElementById('history');
+      const composer = document.getElementById('composer');
+      const simulate = document.getElementById('simulate');
+      function addMsg(text, out=false){
+        const m = document.createElement('div');
+        m.className = 'message ' + (out? 'outgoing' : 'incoming');
+        const b = document.createElement('div');
+        b.className = 'bubble'; b.textContent = text; m.appendChild(b);
+        history.appendChild(m); history.scrollTop = history.scrollHeight;
+      }
+      function text(){ return composer.innerText.trim(); }
+      function clear(){ composer.innerText=''; }
+      function send(){ const t = text(); if(!t) return; addMsg(t,true); clear(); if (simulate.checked) setTimeout(()=> addMsg(`You said "${t}" — what do you mean?`), 450); }
+      composer.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+      addMsg('Welcome to TG-like demo');
+    </script>
+  </body>
+  </html>
+

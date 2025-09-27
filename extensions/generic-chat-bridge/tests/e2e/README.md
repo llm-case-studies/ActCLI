@@ -10,6 +10,7 @@ Run Locally
 1) Set env: `export EXTENSION_PATH=$(pwd)` (the extension root)
 2) In this folder: `npx playwright test -c playwright.config.ts`
 3) Optional Docker readiness: `RUN_OSS=1 npx playwright test -c playwright.config.ts docker-readiness.spec.ts`
+4) Force fresh browser profile (no cached logins): set `PW_FRESH=1`
 
 What Tests Do
 - Launch Chromium with the extension loaded (MV3)
@@ -22,12 +23,23 @@ Suggested Additional Specs (included)
 - `iframe.spec.ts` — run inside a same-origin iframe using frameLocator
 - `persistence.spec.ts` — confirm profile persistence across reload
 - `mutation-relearn.spec.ts` — break a selector, expect failure, re-learn, then succeed
+ - Tip: You can bypass overlay picking by injecting a profile directly:
+   ```ts
+   await page.waitForFunction(() => Boolean((window as any).__actcli_bridge));
+   await page.evaluate(() => window.postMessage({ __actcli_pick: true, stage: 'input', selector: '#composer' }, '*'));
+   await page.evaluate(() => window.postMessage({ __actcli_pick: true, stage: 'send', selector: '__ENTER__' }, '*'));
+   await page.evaluate(() => window.postMessage({ __actcli_pick: true, stage: 'history', selector: '#history' }, '*'));
+   // or use the new message API:
+   await page.evaluate(() => chrome.runtime.sendMessage({ type: 'content.injectProfile', profile: { input: '#composer', send: '__ENTER__', history: '#history' } }));
+   ```
 
 Notes
 - Tests use a persistent context to allow MV3 extension loading.
 - Popup not used; we drive content script helper `window.__actcli_bridge`.
 - For virtualized/iframe cases, copy/extend the existing test patterns.
- - To run Docker OSS targets, start services in `extensions/generic-chat-bridge/docker/` with `docker compose up -d`.
+- To run Docker OSS targets, start services in `extensions/generic-chat-bridge/docker/` with `docker compose up -d`.
+- Rocket.Chat UI test loads `docker/.env` automatically if present (without overriding existing env). Set `RC_USER1/RC_USER1_PASS`, or just set `RC_ADMIN_EMAIL/RC_ADMIN_PASS` and the test will use admin creds.
+ - To avoid auto-login from a previous run, use `PW_FRESH=1` (deletes the persistent profile dir before launching).
 
 Troubleshooting (PW)
 - Extension not loading / globals undefined:

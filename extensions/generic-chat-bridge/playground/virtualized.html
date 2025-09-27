@@ -5,18 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Playground: Virtualized History</title>
     <style>
-      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; }
+      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background:#0b0c10; color:#e5e7eb; }
       .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-      .ce { min-height: 80px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
+      .ce { min-height: 100px; padding: 10px; border: 1px solid #1f2937; border-radius: 8px; background:#111827; }
       button { padding: 6px 12px; }
-      #viewport { height: 240px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 12px; }
+      #viewport { height: 240px; overflow: auto; border: 1px solid #1f2937; border-radius: 6px; margin-top: 12px; background:#111827; }
       #history { position: relative; }
-      .msg { padding: 6px 8px; background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; margin: 6px; }
-      .placeholder { height: 24px; margin: 6px; background: #e2e8f0; border-radius: 4px; }
+      .msg { padding: 6px 8px; background: #111827; border: 1px solid #1f2937; border-radius: 6px; margin: 6px; }
+      .placeholder { height: 24px; margin: 6px; background: #0f172a; border-radius: 4px; }
+      .muted { color:#9ca3af; font-size:12px; }
+      label { user-select: none; }
     </style>
   </head>
   <body>
     <h3>Playground: Virtualized History</h3>
+    <div class="muted" style="margin-bottom:8px">
+      Enter sends • Shift+Enter newline.
+      <label style="margin-left:12px"><input type="checkbox" id="simulate" /> Simulate replies</label>
+    </div>
     <div class="row">
       <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message"></div>
       <button id="send">Send</button>
@@ -27,6 +33,7 @@
     <script>
       const composer = document.getElementById('composer');
       const send = document.getElementById('send');
+      const simulate = document.getElementById('simulate');
       const viewport = document.getElementById('viewport');
       const history = document.getElementById('history');
 
@@ -75,14 +82,19 @@
 
       viewport.addEventListener('scroll', render);
 
-      send.addEventListener('click', () => {
+      function doSend() {
         const txt = composer.innerText.trim();
         if (!txt) return;
         addItem(txt);
         composer.innerText = '';
+        if (simulate.checked) {
+          setTimeout(() => addItem(`You said "${txt}" — what do you mean?`), 400);
+        }
         // auto scroll down
         setTimeout(() => { viewport.scrollTop = viewport.scrollHeight; }, 0);
-      });
+      }
+      send.addEventListener('click', doSend);
+      composer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
 
       // Seed some items to simulate large history
       for (let i = 0; i < 50; i++) items.push({ id: nextId++, text: 'hello #' + i });
@@ -90,4 +102,3 @@
     </script>
   </body>
   </html>
-

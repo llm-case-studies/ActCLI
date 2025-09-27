@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground: Slack-like (threads)</title>
+    <style>
+      :root { --bg:#0b0c10; --sidebar:#0e1621; --panel:#0f172a; --muted:#9ca3af; --border:#1f2937; --text:#e5e7eb; --bubble:#111827; --out:#0b3d3a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background: var(--bg); color: var(--text); }
+      header { background: var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding: 10px 12px; }
+      .title { font-weight:600; }
+      .muted { color: var(--muted); font-size:12px; }
+      .app { display: grid; grid-template-columns: 260px 1fr 0px; transition: grid-template-columns .2s ease; height: calc(100vh - 52px); }
+      .app.thread { grid-template-columns: 260px 1fr 340px; }
+      .sidebar { background: var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; }
+      .sb-head { padding: 12px; border-bottom:1px solid var(--border); font-weight: 600; }
+      .channels { padding: 8px; overflow:auto; }
+      .ch { padding:8px 10px; border-radius: 6px; cursor: pointer; }
+      .ch.active, .ch:hover { background:#18212e; }
+      .main { display:grid; grid-template-rows: 56px 1fr 84px; }
+      .head { background: var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; padding: 0 12px; }
+      .room { font-weight:600; }
+      #history { overflow:auto; padding: 12px; }
+      .message { margin:6px 0; display:flex; gap:8px; }
+      .avatar { width:28px; height:28px; border-radius:50%; background:#223; flex-shrink:0; }
+      .bubble { background: var(--bubble); border:1px solid var(--border); border-radius: 10px; padding: 8px 10px; max-width:85%; }
+      .meta { font-size:11px; color: var(--muted); margin-top:4px; }
+      .reply { font-size:12px; color:#a7f3d0; cursor:pointer; margin-top:2px; display:inline-block; }
+      .composer { background: var(--panel); border-top:1px solid var(--border); display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:10px; }
+      .btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius: 50%; border:1px solid var(--border); background:#0f172a; color:#a7f3d0; cursor:pointer; }
+      .ce { min-height: 52px; max-height: 120px; overflow:auto; padding: 8px; border:1px solid var(--border); border-radius: 10px; background:#111827; }
+      .thread { border-left:1px solid var(--border); display:grid; grid-template-rows: 44px 1fr 84px; }
+      .thread-head { background:#0e1621; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; padding: 0 10px; }
+      #thread-history { overflow:auto; padding: 10px; }
+      .t-bubble { background:#101622; border:1px solid var(--border); border-radius:10px; padding:8px 10px; margin: 6px 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Slack-like</div>
+      <div class="muted">Enter sends • Shift+Enter newline • Threads panel (toggle)</div>
+      <label style="margin-left:12px"><input type="checkbox" id="simulate"/> Simulate replies</label>
+      <label style="margin-left:12px"><input type="checkbox" id="toggleThread"/> Show thread</label>
+    </header>
+    <div id="app" class="app">
+      <aside class="sidebar" role="navigation" aria-label="channels">
+        <div class="sb-head">ActCLI • Slack-like</div>
+        <div class="channels" role="list">
+          <div class="ch active" role="listitem"># general</div>
+          <div class="ch" role="listitem"># pricing</div>
+          <div class="ch" role="listitem"># e2e</div>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head"><div class="room" data-qa="sl-room"># e2e</div></div>
+        <div id="history" role="list" aria-label="history">
+          <div class="message" role="listitem">
+            <div class="avatar"></div>
+            <div>
+              <div class="bubble">Welcome to Slack-like mock</div>
+              <div class="meta">bot • now</div>
+              <span class="reply" data-action="reply">Reply in thread</span>
+            </div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="btn" title="Attach">📎</div>
+          <div id="composer" class="ce" contenteditable="true" role="textbox" aria-label="message" data-qa="sl-input"></div>
+          <div id="sendBtn" class="btn" title="Send" aria-label="Send">➤</div>
+        </div>
+      </section>
+      <aside class="thread" id="threadPane" aria-label="thread" hidden>
+        <div class="thread-head">Thread</div>
+        <div id="thread-history" role="list" aria-label="thread-history"></div>
+        <div class="composer">
+          <div class="btn">↩</div>
+          <div id="t-composer" class="ce" contenteditable="true" role="textbox" aria-label="thread-message" data-qa="sl-thread-input"></div>
+          <div id="t-sendBtn" class="btn" title="Send" aria-label="Send">➤</div>
+        </div>
+      </aside>
+    </div>
+    <script>
+      const app = document.getElementById('app');
+      const historyEl = document.getElementById('history');
+      const composer = document.getElementById('composer');
+      const sendBtn = document.getElementById('sendBtn');
+      const simulate = document.getElementById('simulate');
+      const toggleThread = document.getElementById('toggleThread');
+      const threadPane = document.getElementById('threadPane');
+      const tHistory = document.getElementById('thread-history');
+      const tComposer = document.getElementById('t-composer');
+      const tSendBtn = document.getElementById('t-sendBtn');
+
+      function addMsg(container, text, withAvatar=false){
+        const m = document.createElement('div'); m.className='message'; m.setAttribute('role','listitem');
+        if (withAvatar) { const av=document.createElement('div'); av.className='avatar'; m.appendChild(av); }
+        const wrap = document.createElement('div');
+        const b = document.createElement('div'); b.className='bubble'; b.textContent=text; wrap.appendChild(b);
+        const meta = document.createElement('div'); meta.className='meta'; meta.textContent='bot • now'; wrap.appendChild(meta);
+        const rep = document.createElement('span'); rep.className='reply'; rep.textContent='Reply in thread'; rep.dataset.action='reply'; wrap.appendChild(rep);
+        m.appendChild(wrap); container.appendChild(m); container.scrollTop = container.scrollHeight;
+      }
+      function addOutgoing(container, text){
+        const m = document.createElement('div'); m.className='message'; m.setAttribute('role','listitem');
+        const wrap = document.createElement('div');
+        const b = document.createElement('div'); b.className='bubble'; b.textContent=text; wrap.appendChild(b);
+        m.style.justifyContent='flex-end'; m.appendChild(wrap); container.appendChild(m); container.scrollTop = container.scrollHeight;
+      }
+
+      function sendMain(){ const t = composer.innerText.trim(); if(!t) return; addOutgoing(historyEl, t); composer.innerText=''; if(simulate.checked) setTimeout(()=> addMsg(historyEl, `You said "${t}" — opening thread?`), 420); }
+      function sendThread(){ const t = tComposer.innerText.trim(); if(!t) return; addOutgoing(tHistory, t); tComposer.innerText=''; if(simulate.checked) setTimeout(()=> addMsg(tHistory, `Ack: "${t}"`), 420); }
+
+      sendBtn.addEventListener('click', sendMain);
+      composer.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMain(); } });
+      tSendBtn.addEventListener('click', sendThread);
+      tComposer.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendThread(); } });
+
+      historyEl.addEventListener('click', (e)=>{
+        const a = e.target.closest('[data-action="reply"]');
+        if (!a) return;
+        threadPane.hidden = false; app.classList.add('thread');
+        addMsg(tHistory, 'Thread started');
+      });
+      toggleThread.addEventListener('change', ()=>{
+        const on = toggleThread.checked; threadPane.hidden = !on; app.classList.toggle('thread', on);
+      });
+    </script>
+  </body>
+  </html>
+

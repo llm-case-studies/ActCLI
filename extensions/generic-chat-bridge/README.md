@@ -18,7 +18,8 @@ Basic Flow
 - Pick Elements: Click input → send → history.
 - Validate: Simulates typing and send; observes history append.
 - Profiles: Stored per-origin via `chrome.storage.local`.
- - MCP: Configure Semhost URL in popup and actions will POST to `/mcp/rpc` and briefly stream `/mcp/sse` to finalize jobs (events logged to `out/audit.json`).
+- MCP: Configure Semhost URL in popup and actions will POST to `/mcp/rpc` and briefly stream `/mcp/sse` to finalize jobs (events logged to `out/audit.json`).
+ - Tip: If the chat submits via keyboard (e.g., Enter or Ctrl+Enter), during picking at the “Send” stage press the actual key combo on the input. The profile stores a keyboard-based send action and Validate will synthesize that keystroke on the input (with form-submit fallback).
 
 Playground
 - Start a static server or open the files directly:

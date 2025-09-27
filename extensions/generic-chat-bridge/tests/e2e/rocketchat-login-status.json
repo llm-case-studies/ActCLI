@@ -1,0 +1,6 @@
+{
+  "url": "http://127.0.0.1:3000/channel/e2e",
+  "title": "ActCLI - Login",
+  "loginVisible": true,
+  "error": "You’re offlinePlease try again later or ask your workspace admin for assistanceConnect"
+}

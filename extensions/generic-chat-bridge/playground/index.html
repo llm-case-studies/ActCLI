@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ActCLI • Playground</title>
+    <style>
+      :root { --bg:#0b0c10; --panel:#111827; --muted:#9ca3af; --border:#1f2937; --accent:#06b6d4; --text:#e5e7eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+      .wrap { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+      aside { background: var(--panel); border-right: 1px solid var(--border); padding: 16px; }
+      header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: #0f172a; }
+      h1 { margin: 0; font-size: 16px; color: #a7f3d0; }
+      nav a { display:block; color: var(--text); text-decoration: none; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid transparent; }
+      nav a:hover { background: #0f172a; border-color: var(--border); }
+      main { padding: 16px; }
+      .muted { color: var(--muted); }
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+      code { background: #0f172a; padding: 2px 4px; border-radius: 4px; }
+      ul { margin: 8px 0 0 18px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ActCLI • Playground</h1>
+    </header>
+    <div class="wrap">
+      <aside>
+        <div class="muted" style="margin-bottom:8px">Pages</div>
+        <nav>
+          <a href="/playground/textarea.html">Textarea (button + Enter submit)</a>
+          <a href="/playground/contenteditable.html">Contenteditable (rich input)</a>
+          <a href="/playground/minimal.html">Minimal (input only; Enter to send)</a>
+          <a href="/playground/virtualized.html">Virtualized history</a>
+          <a href="/playground/iframe.html">Same-origin iframe</a>
+          <a href="/playground/rc.html">Rocket.Chat-like</a>
+          <a href="/playground/slack.html">Slack-like (threads)</a>
+          <a href="/playground/preply.html">Preply-like (board + chat)</a>
+          <a href="/playground/shell.html">Shell (left nav + iframe)</a>
+        </nav>
+      </aside>
+      <main>
+        <div class="card">
+          <div class="muted">How to use</div>
+          <ul>
+            <li>Load a page and map with the extension popup: Pick → Validate (or use Auto Map).</li>
+            <li>Send with Enter; Shift+Enter inserts a newline. A Send icon button is also available on some pages.</li>
+            <li>Toggle “Simulate replies” on a page to get a canned response like “You said &lt;text&gt; — what do you mean?”</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="muted">Tips</div>
+          <ul>
+            <li>For Enter-based submit, at the Send stage press the actual key combo (Enter/Ctrl+Enter).</li>
+            <li>History containers expose new messages so MutationObserver can detect appends.</li>
+          </ul>
+        </div>
+      </main>
+    </div>
+  </body>
+  </html>

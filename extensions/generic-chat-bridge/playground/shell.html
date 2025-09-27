@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ActCLI • Playground Shell</title>
+    <style>
+      :root { --bg:#0b0c10; --panel:#111827; --muted:#9ca3af; --border:#1f2937; --accent:#06b6d4; --text:#e5e7eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+      .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+      aside { background: var(--panel); border-right: 1px solid var(--border); padding: 16px; }
+      header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: #0f172a; display:flex; align-items:center; gap:12px; }
+      h1 { margin: 0; font-size: 16px; color: #a7f3d0; }
+      nav a { display:block; color: var(--text); text-decoration: none; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid transparent; }
+      nav a:hover, nav a.active { background: #0f172a; border-color: var(--border); }
+      main { padding: 0; }
+      iframe { width: 100%; height: calc(100vh - 48px); border: 0; }
+      .muted { color: var(--muted); }
+      .spacer { flex:1; }
+      .btn { color:#a7f3d0; text-decoration:none; border:1px solid var(--border); padding:4px 8px; border-radius:6px; }
+      .btn:hover { background:#0f172a; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ActCLI • Playground Shell</h1>
+      <span class="spacer"></span>
+      <a href="/playground/" class="btn">Home</a>
+    </header>
+    <div class="wrap">
+      <aside>
+        <div class="muted" style="margin-bottom:8px">Pages</div>
+        <nav id="nav"></nav>
+      </aside>
+      <main>
+        <iframe id="frame" title="Playground"></iframe>
+      </main>
+    </div>
+    <script>
+      const pages = [
+        { id:'textarea', title:'Textarea', path:'/playground/textarea.html' },
+        { id:'contenteditable', title:'Contenteditable', path:'/playground/contenteditable.html' },
+        { id:'minimal', title:'Minimal (input only)', path:'/playground/minimal.html' },
+        { id:'virtualized', title:'Virtualized', path:'/playground/virtualized.html' },
+        { id:'iframe', title:'Same-origin iframe', path:'/playground/iframe.html' },
+        { id:'wa', title:'WhatsApp-like', path:'/playground/wa.html' },
+        { id:'tg', title:'Telegram-like', path:'/playground/tg.html' },
+        { id:'rc', title:'Rocket.Chat-like', path:'/playground/rc.html' },
+        { id:'slack', title:'Slack-like (threads)', path:'/playground/slack.html' },
+        { id:'preply', title:'Preply-like (board + chat)', path:'/playground/preply.html' },
+      ];
+      const params = new URLSearchParams(location.search);
+      const current = params.get('page') || 'wa';
+      const nav = document.getElementById('nav');
+      pages.forEach(p => {
+        const a = document.createElement('a');
+        a.textContent = p.title;
+        a.href = `?page=${p.id}`;
+        if (p.id === current) a.className = 'active';
+        nav.appendChild(a);
+      });
+      const chosen = pages.find(p => p.id === current) || pages[0];
+      document.getElementById('frame').src = chosen.path;
+    </script>
+  </body>
+  </html>

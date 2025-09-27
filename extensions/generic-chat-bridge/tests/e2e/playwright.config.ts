@@ -11,6 +11,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     baseURL: process.env.PLAYGROUND_URL || 'http://127.0.0.1:4400',
   },
   projects: [
@@ -28,4 +30,3 @@ export default defineConfig({
     },
   ],
 });
-

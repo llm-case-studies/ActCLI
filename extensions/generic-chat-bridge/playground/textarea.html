@@ -5,24 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Playground: Textarea</title>
     <style>
-      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; }
-      .row { display: flex; gap: 8px; }
-      textarea { width: 100%; height: 80px; padding: 8px; font: inherit; }
-      button { padding: 6px 12px; }
-      #history { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
-      .msg { padding: 6px 8px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; }
+      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background:#0b0c10; color:#e5e7eb; }
+      .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+      .input-wrap { position: relative; }
+      textarea { width: 100%; height: 100px; padding: 10px 44px 10px 10px; font: inherit; border-radius: 8px; border: 1px solid #1f2937; background:#111827; color:#e5e7eb; }
+      .send-btn { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #1f2937; background:#0f172a; color:#a7f3d0; cursor: pointer; }
+      .muted { color:#9ca3af; font-size: 12px; }
+      #history { margin-top: 16px; border-top: 1px solid #1f2937; padding-top: 12px; }
+      .msg { padding: 6px 8px; background: #111827; border: 1px solid #1f2937; border-radius: 6px; margin-bottom: 8px; }
+      label { user-select: none; }
     </style>
   </head>
   <body>
     <h3>Playground: Textarea</h3>
+    <div class="muted" style="margin-bottom:8px">
+      Enter sends • Shift+Enter adds newline • Send icon button available.
+      <label style="margin-left:12px"><input type="checkbox" id="simulate" /> Simulate replies</label>
+    </div>
     <div class="row">
-      <textarea id="composer" aria-label="message"></textarea>
+      <div class="input-wrap">
+        <textarea id="composer" aria-label="message" placeholder="Type a message…"></textarea>
+        <button id="sendIcon" class="send-btn" title="Send" aria-label="Send">➤</button>
+      </div>
       <button id="send">Send</button>
     </div>
     <div id="history" aria-label="history" role="list"></div>
     <script>
       const composer = document.getElementById('composer');
       const send = document.getElementById('send');
+      const sendIcon = document.getElementById('sendIcon');
+      const simulate = document.getElementById('simulate');
       const history = document.getElementById('history');
       function addMsg(text) {
         const div = document.createElement('div');
@@ -30,13 +42,20 @@
         div.textContent = text;
         history.appendChild(div);
       }
-      send.addEventListener('click', () => {
-        const txt = composer.value.trim();
+      function doSend() {
+        const txt = composer.value.replace(/\r/g,'').trim();
         if (!txt) return;
         addMsg(txt);
         composer.value = '';
+        if (simulate.checked) {
+          setTimeout(() => addMsg(`You said "${txt}" — what do you mean?`), 400);
+        }
+      }
+      send.addEventListener('click', doSend);
+      sendIcon.addEventListener('click', doSend);
+      composer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
       });
     </script>
   </body>
   </html>
-

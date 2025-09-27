@@ -12,7 +12,9 @@
     "http://localhost:7530/*",
     "http://127.0.0.1:7530/*",
     "http://localhost:4400/*",
-    "http://127.0.0.1:4400/*"
+    "http://127.0.0.1:4400/*",
+    "http://127.0.0.1:3000/*",
+    "http://127.0.0.1:9991/*"
   ],
   "background": {
     "service_worker": "src/background/index.js",
@@ -20,14 +22,14 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://127.0.0.1:3000/*", "http://127.0.0.1:4400/*", "http://127.0.0.1:9991/*"],
       "js": ["src/shared/selectors.js", "src/content/overlay.js"],
       "all_frames": true,
       "run_at": "document_end",
       "world": "MAIN"
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://127.0.0.1:3000/*", "http://127.0.0.1:4400/*", "http://127.0.0.1:9991/*"],
       "js": ["src/content/index.js"],
       "all_frames": true,
       "run_at": "document_end"
