@@ -1,0 +1,1 @@
+{ "input": "[data-qa=\"tg-input\"]", "send": "__KEY:Enter__", "history": "#history" }

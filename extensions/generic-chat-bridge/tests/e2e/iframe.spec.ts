@@ -7,6 +7,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -24,7 +25,7 @@ test('iframe.html • pick → validate inside same-origin iframe', async () => 
     ],
   });
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/iframe.html`);
+  await page.goto(playgroundUrl('iframe.html'));
 
   // Access the child frame (same-origin)
   const frameLocator = page.frameLocator('iframe');
@@ -54,4 +55,3 @@ test('iframe.html • pick → validate inside same-origin iframe', async () => 
 
   await context.close();
 });
-

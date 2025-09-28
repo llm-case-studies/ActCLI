@@ -7,6 +7,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -24,7 +25,7 @@ test('textarea.html • profile persists across reload', async () => {
     ],
   });
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/textarea.html`);
+  await page.goto(playgroundUrl('textarea.html'));
   await page.waitForFunction(() => Boolean((window as any).__actcli_bridge?.pick));
 
   // Pick once
@@ -46,4 +47,3 @@ test('textarea.html • profile persists across reload', async () => {
 
   await context.close();
 });
-

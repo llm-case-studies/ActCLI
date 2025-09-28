@@ -7,6 +7,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -29,7 +30,7 @@ test('TEMPLATE • pick → validate on a page', async () => {
 
   // 2) Create a page and navigate to a test URL
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/textarea.html`); // change to your target page
+  await page.goto(playgroundUrl('textarea.html')); // change to your target page
 
   // 3) OPTIONAL: capture logs to speed up debugging
   page.on('console', msg => console.log('PAGE LOG:', msg.text()));
@@ -58,4 +59,3 @@ test('TEMPLATE • pick → validate on a page', async () => {
   // 8) Clean up
   await context.close();
 });
-

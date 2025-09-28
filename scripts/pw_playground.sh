@@ -28,9 +28,9 @@ npx playwright install chromium >/dev/null
 
 echo "[PW] Running E2E suite (Playground)…"
 pushd "$E2E_DIR" >/dev/null
-EXTENSION_PATH="$EXT_DIR" npx playwright test -c playwright.config.ts
+EXTENSION_PATH="$EXT_DIR" PLAYGROUND_URL="http://127.0.0.1:4400/playground" \
+  npx playwright test -c playwright.config.ts progressive
 STATUS=$?
 popd >/dev/null
 
 exit $STATUS
-

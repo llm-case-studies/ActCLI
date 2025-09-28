@@ -255,6 +255,13 @@ if (!window.__actcliOverlay) {
   window.__actcli_bridge = {
     computeSelector,
     pick: () => _overlay.start(),
-    validate: (text) => sendToIsolated('validate', { text })
+    // Accept either a string (text) or an options object { text, noSubmit, holdMs }
+    validate: (arg) => {
+      if (typeof arg === 'string') return sendToIsolated('validate', { text: arg });
+      const opts = arg || {};
+      return sendToIsolated('validate', { text: opts.text, noSubmit: opts.noSubmit, holdMs: opts.holdMs });
+    },
+    // Convenience: type but keep text visible for given ms (default 20s); does not submit
+    validateHold: (text, ms = 20000) => sendToIsolated('validate', { text, noSubmit: true, holdMs: ms })
   };
 }

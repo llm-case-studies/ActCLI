@@ -8,6 +8,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -27,7 +28,7 @@ test('virtualized.html • pick → validate appends to visible history', async 
   });
 
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/virtualized.html`);
+  await page.goto(playgroundUrl('virtualized.html'));
 
   // IMPORTANT: wait for the MAIN-world debug API to become available
   await page.waitForFunction(() => Boolean((window as any).__actcli_bridge?.pick));
@@ -63,4 +64,3 @@ test('virtualized.html • pick → validate appends to visible history', async 
 
   await context.close();
 });
-

@@ -39,66 +39,190 @@
 
       let items = []; // { id, text }
       let nextId = 1;
+      let rowH = 0; // measured row height including margins
+
+      function measureRowHeight() {
+        const probe = document.createElement('div');
+        probe.className = 'msg';
+        probe.textContent = 'probe';
+        probe.style.visibility = 'hidden';
+        history.appendChild(probe);
+        const rect = probe.getBoundingClientRect();
+        const cs = getComputedStyle(probe);
+        const mt = parseFloat(cs.marginTop || '0');
+        const mb = parseFloat(cs.marginBottom || '0');
+        rowH = Math.max(1, Math.round(rect.height + mt + mb));
+        probe.remove();
+      }
 
       function addItem(text) {
-        items.push({ id: nextId++, text });
+        console.log('[VIRT] addItem called with:', JSON.stringify(text));
+        const newItem = { id: nextId++, text };
+        items.push(newItem);
+        console.log('[VIRT] items.length now:', items.length, 'last item:', newItem);
         render();
       }
 
-      function visibleRange() {
-        const top = viewport.scrollTop;
-        const bottom = top + viewport.clientHeight;
-        const approxIndexTop = Math.floor(top / 36);
-        const approxIndexBottom = Math.ceil(bottom / 36);
-        const start = Math.max(0, approxIndexTop - 5);
-        const end = Math.min(items.length, approxIndexBottom + 5);
+      function visibleRange(explicitScrollTop) {
+        if (!rowH) measureRowHeight();
+        const total = items.length;
+        const top = explicitScrollTop !== undefined ? explicitScrollTop : viewport.scrollTop;
+        const client = viewport.clientHeight;
+        const overscan = 2; // reduce overscan to prevent too many items
+        const visibleRows = Math.ceil(client / rowH);
+        const needed = Math.max(1, visibleRows + overscan);
+        let start = Math.floor(top / rowH) - Math.floor(overscan / 2);
+        start = Math.max(0, start);
+        let end = Math.min(total, start + needed);
+
+        // Ensure we don't go past the end
+        if (end > total) {
+          end = total;
+          start = Math.max(0, end - needed);
+        }
+
+        console.log('[VIRT] visibleRange calc: top=', top, 'client=', client, 'rowH=', rowH, 'visibleRows=', visibleRows, 'total=', total, 'needed=', needed, 'start=', start, 'end=', end);
         return { start, end };
       }
 
-      function render() {
+      function render(preserveScroll = true, explicitScrollTop) {
+        if (!rowH) measureRowHeight();
+        const prevTop = preserveScroll ? viewport.scrollTop : undefined;
+        
         history.innerHTML = '';
-        const { start, end } = visibleRange();
-        // pre placeholder
-        if (start > 0) {
-          const pre = document.createElement('div');
-          pre.className = 'placeholder';
-          pre.style.height = (start * 36) + 'px';
-          history.appendChild(pre);
-        }
+        history.style.height = (items.length * rowH) + 'px';
+
+        const { start, end } = visibleRange(explicitScrollTop);
+        console.log('[VIRT] render() - visible range:', start, 'to', end, 'of', items.length, 'preserveScroll:', preserveScroll);
+
         for (let i = start; i < end; i++) {
           const it = items[i];
           const div = document.createElement('div');
           div.className = 'msg';
           div.textContent = it.text;
+          div.style.position = 'absolute';
+          div.style.top = (i * rowH) + 'px';
+          div.style.left = '0';
+          div.style.right = '0';
           history.appendChild(div);
         }
-        if (end < items.length) {
-          const post = document.createElement('div');
-          post.className = 'placeholder';
-          post.style.height = ((items.length - end) * 36) + 'px';
-          history.appendChild(post);
+        
+        // preserve scroll position across render (unless explicitly disabled)
+        if (preserveScroll && prevTop !== undefined) {
+          viewport.scrollTop = prevTop;
         }
+
+        const renderedMsgs = Array.from(document.querySelectorAll('#history .msg')).map(n => n.textContent);
+        console.log('[VIRT] rendered messages:', renderedMsgs.slice(-3)); // Show last 3
       }
 
-      viewport.addEventListener('scroll', render);
+      let rafScheduled = false;
+      viewport.addEventListener('scroll', () => {
+        if (!rafScheduled) {
+          rafScheduled = true;
+          requestAnimationFrame(() => {
+            render();
+            rafScheduled = false;
+          });
+        }
+      });
 
       function doSend() {
+        console.log('[VIRT] doSend() called');
         const txt = composer.innerText.trim();
-        if (!txt) return;
+        console.log('[VIRT] extracted text:', JSON.stringify(txt));
+        console.log('[VIRT] composer.innerHTML:', composer.innerHTML);
+        console.log('[VIRT] composer.textContent:', JSON.stringify(composer.textContent));
+
+        if (!txt) {
+          console.log('[VIRT] No text found, returning early');
+          return;
+        }
+
+        console.log('[VIRT] Adding item:', txt);
         addItem(txt);
         composer.innerText = '';
+        console.log('[VIRT] Cleared composer, new innerHTML:', composer.innerHTML);
+
         if (simulate.checked) {
+          console.log('[VIRT] Simulate checked, adding reply');
           setTimeout(() => addItem(`You said "${txt}" — what do you mean?`), 400);
         }
-        // auto scroll down
-        setTimeout(() => { viewport.scrollTop = viewport.scrollHeight; }, 0);
+        // auto scroll down and render at bottom
+        setTimeout(() => {
+          console.log('[VIRT] Auto-scrolling to bottom');
+          scrollUpdateInProgress = true;
+          console.log('[VIRT] Before scroll: scrollTop=', viewport.scrollTop, 'scrollHeight=', viewport.scrollHeight);
+          viewport.scrollTop = viewport.scrollHeight;
+          console.log('[VIRT] After scroll: scrollTop=', viewport.scrollTop, 'scrollHeight=', viewport.scrollHeight);
+          requestAnimationFrame(() => {
+            console.log('[VIRT] In RAF: scrollTop=', viewport.scrollTop, 'scrollHeight=', viewport.scrollHeight);
+            const targetScrollTop = viewport.scrollHeight;
+            render(false, targetScrollTop); // Don't preserve scroll, use target position
+            // Force scroll again after render in case the scroll height changed
+            viewport.scrollTop = targetScrollTop;
+            console.log('[VIRT] Final scroll: scrollTop=', viewport.scrollTop, 'scrollHeight=', viewport.scrollHeight);
+            // Keep scroll update in progress for a bit longer to prevent immediate scroll events
+            setTimeout(() => {
+              scrollUpdateInProgress = false;
+              console.log('[VIRT] Scroll update complete');
+            }, 100);
+          });
+        }, 0);
       }
-      send.addEventListener('click', doSend);
-      composer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+      send.addEventListener('click', () => {
+        console.log('[VIRT] Send button clicked');
+        doSend();
+      });
+      composer.addEventListener('keydown', (e) => {
+        console.log('[VIRT] Keydown in composer:', e.key, 'shift:', e.shiftKey);
+        if (e.key === 'Enter' && !e.shiftKey) {
+          console.log('[VIRT] Enter without shift - preventing default and calling doSend');
+          e.preventDefault();
+          doSend();
+        }
+      });
 
       // Seed some items to simulate large history
       for (let i = 0; i < 50; i++) items.push({ id: nextId++, text: 'hello #' + i });
-      render();
+      measureRowHeight();
+      console.log('[VIRT] Initial setup - items.length:', items.length, 'rowH:', rowH);
+      
+      // Set the full height of the history container first
+      history.style.height = (items.length * rowH) + 'px';
+      
+      // Start at the bottom to show the latest messages
+      viewport.scrollTop = viewport.scrollHeight;
+      
+      // Now render the visible items
+      render(false, viewport.scrollTop); 
+      console.log('[VIRT] Page loaded and rendered');
+
+      window.__virt = {
+        scrollToBottom: () => {
+          viewport.scrollTop = viewport.scrollHeight;
+          render(false, viewport.scrollHeight);
+        },
+        scrollToTop: () => {
+          console.log('[VIRT] scrollToTop called');
+          viewport.scrollTop = 0;
+          console.log('[VIRT] Set scrollTop to 0, now calling render with explicit 0');
+          render(false, 0);
+          console.log('[VIRT] After render, actual scrollTop:', viewport.scrollTop);
+        },
+        scrollUp: () => {
+          viewport.scrollTop = Math.max(0, viewport.scrollTop - 200);
+          render(false, viewport.scrollTop);
+        },
+        scrollDown: () => {
+          viewport.scrollTop = Math.min(viewport.scrollHeight, viewport.scrollTop + 200);
+          render(false, viewport.scrollTop);
+        },
+        info: () => ({ top: viewport.scrollTop, sh: viewport.scrollHeight, ch: viewport.clientHeight, rowH, len: items.length }),
+        visible: () => Array.from(document.querySelectorAll('#history .msg')).map(n => n.textContent),
+        testSend: (text) => { composer.innerText = text; doSend(); },
+        items: () => items
+      };
     </script>
   </body>
   </html>
