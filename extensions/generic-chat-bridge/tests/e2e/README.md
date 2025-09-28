@@ -54,3 +54,25 @@ Troubleshooting (PW)
   - Remove `.pw-chrome-profile*` folders in this directory and re‑run tests.
 - Service worker/background errors:
   - Open `chrome://extensions`, click the extension → “Errors” to inspect logs.
+
+Progressive Suite
+- Location: `progressive/*.spec.ts` with JSON mappings in `mappings/`.
+- What it covers:
+  - Basic mocks: textarea, contenteditable, minimal, virtualized, iframe
+  - Messenger-like: WA/TG/RC (RC includes mutation toggle stress)
+  - Productivity-like: Preply (board canvas + chat)
+  - Slack-like: main channel + thread pane
+- Determinism: tests inject mappings directly (no overlay clicks) via `content.injectProfile` if available, else `window.postMessage` fallback. All tests wait up to ~10s for `window.__actcli_bridge` and capture a screenshot on failure.
+- Run the progressive suite:
+  - From repo root: `bash scripts/pw_playground.sh`
+  - Or here: `EXTENSION_PATH=$(realpath ../../) npx playwright test -c playwright.config.ts progressive`
+- Add/inspect mappings:
+  - JSON format: `{ "input": "<selector>", "send": "__KEY:Enter__", "history": "<selector>" }`
+  - Examples live under `mappings/` (textarea/contenteditable/minimal/virtualized/iframe/wa/tg/rc/preply/slack-main/slack-thread).
+  - You can also export/import profiles via the popup UI; tests will always prefer injected mappings for stability.
+
+Orchestration helpers
+- `bash scripts/playground.sh start` — start static server at `http://127.0.0.1:4400`
+- `bash scripts/pw_playground.sh` — run all Playground E2E (includes progressive)
+- `bash scripts/rc.sh up` then `bash scripts/rc.sh seed` — spin up and seed Rocket.Chat
+- `PW_FRESH=1 RC_LOGIN_MODE=api-first bash scripts/pw_orchestrate.sh test:rc` — optional RC UI test

@@ -1,0 +1,1 @@
+{ "input": "[data-qa=\"preply-input\"]", "send": "__KEY:Enter__", "history": "#history" }

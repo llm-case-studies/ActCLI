@@ -1,4 +1,5 @@
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -23,7 +24,7 @@ test.describe('BrExt • Playground E2E (Learn→Validate→Re-learn)', () => {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
-    await page.goto(`${BASE_URL}/textarea.html`);
+    await page.goto(playgroundUrl('textarea.html'));
     // Wait for content scripts to load and API to be ready
     await page.waitForFunction(() => Boolean((window as any).__actcli_bridge && (window as any).__actcli_bridge.pick), { timeout: 10000 });
     // Start picking via exposed debug API
@@ -56,7 +57,7 @@ test.describe('BrExt • Playground E2E (Learn→Validate→Re-learn)', () => {
       ],
     });
     const page = await context.newPage();
-    await page.goto(`${BASE_URL}/contenteditable.html`);
+    await page.goto(playgroundUrl('contenteditable.html'));
     await page.waitForFunction(() => Boolean((window as any).__actcli_bridge && (window as any).__actcli_bridge.pick));
     await page.evaluate(() => (window as any).__actcli_bridge.pick());
     await page.click('[role="textbox"]');

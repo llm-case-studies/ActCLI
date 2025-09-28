@@ -8,6 +8,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -25,7 +26,7 @@ test('textarea.html • mutation breakage then re-learn', async () => {
     ],
   });
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/textarea.html`);
+  await page.goto(playgroundUrl('textarea.html'));
   await page.waitForFunction(() => Boolean((window as any).__actcli_bridge?.pick));
 
   // Initial learn
@@ -65,4 +66,3 @@ test('textarea.html • mutation breakage then re-learn', async () => {
 
   await context.close();
 });
-

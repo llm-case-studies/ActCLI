@@ -3,6 +3,7 @@
  */
 
 import { test, expect, chromium } from '@playwright/test';
+import { playgroundUrl } from './urls';
 import path from 'path';
 import fs from 'fs';
 
@@ -33,7 +34,7 @@ test.describe('Debug Extension Loading', () => {
     });
 
     // Go to playground which should match our patterns
-    await page.goto('http://127.0.0.1:4400/textarea.html');
+    await page.goto(playgroundUrl('textarea.html'));
     await page.waitForTimeout(3000);
 
     console.log('Current URL:', page.url());

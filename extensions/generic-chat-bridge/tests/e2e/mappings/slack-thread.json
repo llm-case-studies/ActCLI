@@ -1,0 +1,1 @@
+{ "input": "[data-qa=\"sl-thread-input\"]", "send": "__KEY:Enter__", "history": "#thread-history" }
