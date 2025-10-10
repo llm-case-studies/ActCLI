@@ -1,300 +1,151 @@
-# ActCLI Browser Extension - Complete Feature Reference
-
-**Owner**: Browser Extension Team (Codex-BrExt + Claude-BrExt)
-**Status**: Production Ready - A5 Complete
-**Version**: 0.5.0 (MCP Integration Complete)
-
-## Overview
-
-The ActCLI Browser Extension enables human actuaries to participate in ActCLI seminars directly from any web chat interface. It provides intelligent element detection, seamless integration with ActCLI's seminar system, and comprehensive audit trail compliance.
-
-## Core Features
-
-### 🎯 **Element Picker** (A1 Foundation)
-
-**What it does**: Intelligent element selection using dev-tools style overlay
-**Use case**: Teaching the extension how to interact with any web chat interface
-
-**How to use**:
-1. Click extension icon → "Pick Elements"
-2. Click Input field (where you type messages)
-3. Click Send button (submits messages)
-4. Click History area (where messages appear)
-5. Extension automatically saves profile for this website
-
-**Key benefits**:
-- Works on ANY web chat (Slack, Teams, Discord, custom apps)
-- Visual feedback with hover highlighting and tooltips
-- Escape key cancels selection at any time
-- Automatic per-website profile storage
-
-### 🧠 **Intelligent Selector Engine** (A2 Algorithm)
-
-**What it does**: Automatically chooses the most reliable way to find elements
-**Use case**: Ensures selectors work even when websites change their layout
-
-**Smart features**:
-- **ARIA-first priority**: Prefers `role="textbox"`, `role="button"` over CSS classes
-- **Keyword matching**: Recognizes "message", "send", "reply", "history" text
-- **Proximity detection**: Input fields near Send buttons get bonus points
-- **Resilience focus**: Avoids brittle selectors that break with updates
-
-**Scoring example**:
-```
-<textarea id="msg" aria-label="message"> → Score: 118 (ID + keyword + context)
-<div role="textbox" data-testid="input"> → Score: 148 (Role + stable attr + context)
-<div class="deep nested path"> → Score: 15 (Penalized for brittleness)
-```
-
-### 🔍 **Health Check System** (Sprint 2)
-
-**What it does**: Validates that saved selectors still work on current page
-**Use case**: Confidence check before attempting validation or connection
-
-**How to use**:
-1. Navigate to a previously configured website
-2. Click "Health" button in extension popup
-3. Get immediate feedback: "Health: OK" or "Health: missing elements"
-
-**When to use**:
-- Before joining important seminars
-- After website updates that might break selectors
-- When troubleshooting connection issues
-
-### ✅ **Validation Flow** (A1 + Improvements)
-
-**What it does**: Tests the complete message roundtrip without disrupting chat
-**Use case**: Verify extension works before joining live seminars
-
-**How it works**:
-1. Enter custom test message (or use default "Hello from ActCLI")
-2. Click "Validate" button
-3. Extension simulates typing + clicking send
-4. Observes if message appears in history
-5. Reports success/failure with details
-
-**Smart features**:
-- Supports both `textarea` and `contenteditable` inputs
-- Uses proper input events (not just setting values)
-- MutationObserver detects history updates
-- Audit logging for all validation attempts
-
-### 📁 **Profile Management** (Sprint 2)
-
-**What it does**: Save, backup, and share element configurations
-**Use case**: Team collaboration and backup/restore workflows
-
-**Export feature**:
-- Downloads JSON file: `actcli-bridge-{hostname}.json`
-- Contains selectors and metadata for sharing
-- Useful for onboarding team members
-
-**Import feature**:
-- Upload previously exported configuration
-- Instantly ready to use on matching websites
-- Error handling for invalid files
-
-### 🔗 **MCP Integration** (A5 Core Mission)
-
-**What it does**: Connects browser extension to ActCLI seminar system
-**Use case**: Seamless participation in multi-model actuarial seminars
-
-**Configuration**:
-- Set Semhost URL (default: `http://127.0.0.1:7530`)
-- Persistent storage across browser sessions
-- Clear error messages if Semhost unavailable
-
-**Connection flow**:
-1. Pick elements and validate on target chat website
-2. Click "Connect" button
-3. Extension registers as participant: `WEB-{hostname}-{random}`
-4. Ready to participate alongside AI models and other humans
-
-**Capabilities advertised**:
-- `send_text`: Can send messages to seminar
-- `recv_text`: Can receive messages from seminar
-- Same interface as Ollama models and API participants
-
-### 📊 **Audit Trail Integration** (A5 Compliance)
-
-**What it does**: Complete evidence logging for actuarial compliance
-**Use case**: Meeting professional audit and documentation requirements
-
-**Events logged**:
-- `participants.register`: When joining seminars
-- `validate`: Success/failure of message testing
-- `web_bridge_event`: All major operations with timestamps
-
-**Audit record format**:
-```json
-{
-  "event": "web_bridge_event",
-  "job": "job_abc123",
-  "tool": "participants.register",
-  "ts": 1727383123,
-  "params": {
-    "origin": "https://chat.example.com",
-    "participant_id": "WEB-chatapp-a1b2c3"
-  }
-}
-```
-
-**Integration**: Records appear in `out/audit.json` alongside other ActCLI evidence
-
-## Advanced Features
-
-### 🧪 **Testing Playground** (Development Support)
-
-**What it includes**:
-- `textarea.html`: Basic text input testing
-- `contenteditable.html`: Rich text editor testing
-- `virtualized.html`: Scrolling history simulation (50+ messages)
-- `iframe.html`: Same-origin frame testing
-
-**How to use**:
-1. Start local server: `python3 -m http.server 4400`
-2. Navigate to `http://localhost:4400/playground/`
-3. Test picker and validation on different input patterns
-4. Verify selectors work across layout types
-
-### 🔬 **Selector Engine Testing** (A2 Validation)
-
-**Built-in test suite**: `tests/selectors.spec.html`
-- Zero dependencies - runs entirely in browser
-- Tests ARIA priority, keyword matching, proximity scoring
-- Visual pass/fail results with detailed scoring
-
-**Unit test coverage**:
-- ID selector preference
-- Role-based selection for accessibility
-- Proximity bonus calculations
-- Resilience penalty validation
-
-### ⚙️ **Configuration Management** (A5 Infrastructure)
-
-**Semhost URL configuration**:
-- User-configurable endpoint for local/remote deployments
-- Validation and save confirmation
-- Graceful degradation when Semhost unavailable
-
-**Profile storage**:
-- Per-origin isolation (profiles don't leak between sites)
-- Automatic cleanup and organization
-- Import/export for team sharing
-
-## Security & Compliance
-
-### 🛡️ **ToS Safety Features**
-
-**Zero AI provider logic**:
-- No hardcoded chat provider URLs or logic
-- Works with ANY website (not just AI chats)
-- General-purpose element interaction only
-
-**Human-paced only**:
-- No background automation or scraping
-- All actions triggered by explicit user clicks
-- Respects website rate limits naturally
-
-### 🔒 **Extension Security**
-
-**Minimal permissions**:
-- `activeTab`: Only access to currently active tab
-- `scripting`: Inject content scripts for picker
-- `storage`: Save configurations locally
-- Host permissions: Only for configured Semhost URL
-
-**Input validation**:
-- CSS.escape() prevents injection attacks
-- JSON schema validation for MCP calls
-- Error boundaries prevent crashes
-
-### 📋 **Privacy Protection**
-
-**No data collection**:
-- All processing happens locally
-- No telemetry or analytics
-- No user content transmitted (except explicit validation)
-
-**Audit transparency**:
-- Clear logging of all operations
-- User can review audit.json records
-- No hidden network calls
-
-## Installation & Setup
-
-### Quick Start
-1. Open `chrome://extensions` → Enable Developer Mode
-2. Click "Load unpacked" → select `extensions/generic-chat-bridge/`
-3. Configure Semhost URL in extension popup
-4. Navigate to any web chat and click "Pick Elements"
-
-### Production Deployment
-1. Build extension: `cd extensions/generic-chat-bridge && npm run build`
-2. Load `dist/` folder as unpacked extension
-3. Configure team Semhost endpoint
-4. Share profiles via export/import for consistent team setup
-
-## Integration Points
-
-### With ActCLI Core
-- **Participant Interface**: Same API as Ollama models
-- **Evidence Packs**: Audit records in `out/audit.json`
-- **MCP Protocol**: Standard JSON-RPC + SSE streaming
-
-### With Semhost
-- **Tool Registration**: `participants.register`, `participants.message`, `events.log`
-- **Configuration**: User-configurable endpoint URL
-- **Error Handling**: Graceful degradation when unavailable
-
-### With Web Applications
-- **Universal Compatibility**: Works with any website structure
-- **Accessibility Support**: ARIA-first element detection
-- **Responsive Design**: Adapts to mobile and desktop layouts
-
-## Troubleshooting
-
-### Common Issues
-
-**"Health: missing elements"**:
-- Website layout changed since last configuration
-- Re-pick elements with updated selectors
-- Check if website uses dynamic loading
-
-**"Connect failed"**:
-- Verify Semhost URL is correct and server running
-- Check browser console for CORS errors
-- Ensure firewall allows localhost connections
-
-**"Validate failed"**:
-- Website may block programmatic input events
-- Try different input techniques in selector engine
-- Check if website requires specific user interaction patterns
-
-### Getting Help
-
-**Debug information**:
-- Browser console shows detailed error messages
-- Extension popup displays real-time status
-- Audit.json contains operation history
-
-**Test environment**:
-- Use playground pages for controlled testing
-- Verify basic functionality before production use
-- Share profiles with team for consistent behavior
-
-## Future Roadmap
-
-### A6 - Enhanced Testing (In Progress)
-- Playwright automation for CI/CD
-- Docker environments for OSS chat applications
-- Cross-platform integration testing
-
-### A7 - Production Polish
-- Advanced error recovery
-- Performance optimization
-- Extended platform support
+# Browser Extension — Feature Reference (WIP)
+
+This document is a reference for other ActCLI teams while the Browser Extension is under active development. It summarizes current capabilities, surfaces the message contracts we expose, outlines our Playground for predictable testing, and sketches near‑term expansions so adjacent areas (Semhost, Studio, QA) can plan in parallel.
+
+## What It Does Today
+
+- Element picking (A1)
+  - Shadow‑DOM overlay with highlight, tooltip, Escape‑to‑cancel
+  - 3‑stage mapping: Input → Send (button or keyboard combo) → History
+  - Fixed overlay coordinates; works while scrolled
+
+- Selector engine (A2)
+  - ARIA‑first (role="textbox") with stable attribute preference (data‑testid, data‑qa)
+  - Pruned CSS fallback; lightweight proximity heuristics
+  - Browser tests on scoring; re‑learn path on breakage
+
+- Runtime bridge
+  - Validates mapping by synthesizing typing + sending and observing visible history appends (MutationObserver)
+  - Keyboard‑based send mapping supported (Enter / Ctrl+Enter / Cmd+Enter), or explicit send button click
+
+- Storage & profiles (A4)
+  - Per‑origin profile in `chrome.storage.local`
+  - Health checks; import/export; Auto Map (best‑effort heuristics)
+
+- MCP integration (A5, MVP)
+  - Semhost advertises `participants.register`, `participants.message`, and `events.log`
+  - SSE returns `ok/fault`; events appended to `out/audit.json` as `web_bridge_event`
+
+- **Popup duplex UI (NEW ✅)**
+  - **Session Management**: Join/Leave seminar with session ID/URL, display name, avatar
+  - **Activity Log**: Rolling log (last ~20 events) with auto-scroll, shows direction and participants
+  - **Compose**: Native input field with Enter-to-send, Shift+Enter for newlines
+  - **Link Page Setup**: Status chips for Input/Send/History, validation, import/export
+  - **Settings**: Semhost URL configuration and persistence
+
+- **Background service worker (NEW ✅)**
+  - **Per-origin state store**: participant_id, session_id, display_name, avatar, activity log
+  - **Join/Leave flows**: Registers participant via MCP, persists state across sessions
+  - **Send functionality**: content.sendText + MCP participants.message + events.log with activity logging
+  - **SSE streaming**: Live subscription to /sessions/{id}/stream for real-time activity updates
+
+- Playground (A6)
+  - Rich local mocks: Textarea, Contenteditable, Minimal (input‑only), Virtualized, Same‑origin Iframe
+  - Messenger‑like: WhatsApp‑like, Telegram‑like, Rocket.Chat‑like (class mutation toggle)
+  - Productivity‑like: Preply‑like (board + chat)
+  - Slack‑like: main channel + thread pane
+  - Shell UI with sidebar navigation (`/playground/shell.html`)
+  - **Relay page**: Dual chat for seminar ↔ remote mirroring (NEW ✅)
+
+- Progressive Playwright tests
+  - Deterministic mapping via `content.injectProfile` / `postMessage` (no overlay clicks)
+  - Suite order: Basic → Messenger → Preply → Slack threads
+  - Base URL `/playground`; headless toggle available for CI
+
+## What's Coming Next (Short‑Term)
+
+- ~~Popup "Send Text" and Mapping Status~~ **✅ COMPLETED**
+  - ~~Popup: input field + button to send an arbitrary message through the mapped page~~ ✅
+  - ~~Background: `bridge.sendText` → invokes `content.sendText` (synthesize keys/click), logs MCP `participants.message` + `events.log`~~ ✅
+  - ~~Content: `content.sendText` mirrors validate flow but without typing the full payload into history observation only; returns `{ ok, observed }`~~ ✅
+  - ~~Mapping status: show input selector, send (button or captured key combo), history selector; run Health on popup open~~ ✅
+
+- **Page-to-seminar capture (HIGH PRIORITY)**
+  - Detect user sends on linked page and post them to seminar automatically
+  - Loop suppression and bidirectional forwarding toggles
+  - "Forward to Page" / "Listen from Page" toggle controls in popup
+
+- **Session listing UI (MEDIUM PRIORITY)**
+  - Add session picker for Local/Recent sessions if sessions.list endpoint is available
+  - Recent session history and quick-join functionality
+
+- Selector engine unit tests (A2 deepening)
+  - Label proximity weighting ("Send", "Reply")
+  - Stable attributes scoring (data‑qa > class), ARIA‑first confirmations
+  - Mutation toggles across mocks confirm re‑learn triggers (no silent failure)
+
+- Optional: RC orchestration wrapper
+  - `scripts/rc.sh` with `up/down/status/logs/seed` to simplify live RC smoke when desired
+
+## Message Contracts (Internal)
+
+- Content (page context)
+  - `content.picker.start` — start overlay; user clicks 3 elements
+  - `content.health` — returns `{ ok: boolean }` (input + history resolved; send optional)
+  - `content.validate` — `{ text }` → synthesizes typing + send; observes history; returns `{ ok, observed }`
+  - `content.injectProfile` — `{ profile }` → set `{ input, send, history }` directly (no overlay)
+  - `content.autoMap` — heuristic profile for common UIs (best‑effort)
+  - **`content.sendText`** — **✅ IMPLEMENTED** — identical to validate flow, used for actual message sending
+  - **`content.forwardText`** — **✅ IMPLEMENTED** — mirrors sendText for seminar→page forwarding
+
+- Background (service worker)
+  - `bridge.saveProfile` / `bridge.getProfile` / `bridge.deleteProfile`
+  - `bridge.pickStart` → proxy to content
+  - `bridge.validate` → proxy to content; logs `events.log` to MCP
+  - **`bridge.join` / `bridge.leave`** — **✅ IMPLEMENTED** — session management with participant registration
+  - **`bridge.sendText`** — **✅ IMPLEMENTED** — calls `participants.message` + `events.log`; proxies to content.sendText
+  - **`bridge.subscribe.start` / `bridge.subscribe.stop`** — **✅ IMPLEMENTED** — SSE streaming for live activity
+  - **`bridge.state.get` / `bridge.state.set`** — **✅ IMPLEMENTED** — per-origin state management
+  - **`bridge.activity.get`** — **✅ IMPLEMENTED** — retrieve activity log for popup display
+  - **`config.get` / `config.set`** — **✅ IMPLEMENTED** — semhost URL configuration
+
+- Semhost MCP tools
+  - `participants.register` — `{ origin, display_name, participant_id, capabilities }`
+  - `participants.message` — `{ participant_id, text, origin }`
+  - `events.log` — `{ event, origin, participant_id?, data? }`
+
+## Playground Index
+
+- `/playground/index.html` — landing page with links & tips
+- `/playground/shell.html` — left sidebar with iframe (no back/forward needed)
+- Pages for mapping:
+  - `textarea.html`, `contenteditable.html`, `minimal.html`, `virtualized.html`, `iframe.html`
+  - `wa.html` (WhatsApp‑like), `tg.html` (Telegram‑like), `rc.html` (Rocket.Chat‑like, mutation toggle)
+  - `preply.html` (board + chat), `slack.html` (threads)
+  - (New) `relay.html` (dual chat, seminar ↔ remote mirroring)
+
+## Integration Guidance for Other Teams
+
+- Semhost / Evidence (A5)
+  - Consume `events.log` entries for provenance in session audit (`web_bridge_event` with origin/selectors/timestamps)
+  - Uniform participant interface: Web participants treated same as model adapters (no special‑casing)
+
+- Studio (UI)
+  - Experimental flag to enable "Web UI participant" and show mapping status
+  - Show audit warnings and ToS disclaimers prior to enabling web bridge features
+
+- QA
+  - Use Progressive Suite to validate bridge against mocks
+  - Add new mocks by cloning existing pages and tweaking selectors; supply mapping JSON under `tests/e2e/mappings/`
+
+## Roadmap (Sketched)
+
+- ~~MVP demo: Popup "Send Text" → map any Playground page → send and audit OK~~ **✅ COMPLETED**
+- **Live local demo**: Two browser instances with Ollama → full duplex seminar participation without cloud dependencies
+- **Page capture**: Automatic detection and forwarding of user messages from linked pages to seminar
+- Live RC/Zulip smoke (opt‑in): only after RC login pains are fully tamed or bypassed via API token in UI flows
+- Selector resilience: richer scoring and structured tests; re‑learn prompts
+
+## How to Try It (NEW ✅)
+
+1. **Set Semhost URL** in Settings if needed (defaults to `http://127.0.0.1:7530`)
+2. **Enter Session ID/URL**, Display Name, and optional Avatar, then **Join Seminar**
+3. **Watch Activity** update as turns come in from other participants
+4. **Type in Compose** and press Send to contribute to the seminar
+5. **Optional**: Link Page (Setup) to mirror sends into a chat UI — Pick Page Controls → Check Link → Validate
+6. **Compose still works** even without linking a page — popup is the primary interface
 
 ---
 
-**Summary**: The ActCLI Browser Extension provides production-ready integration between web chat interfaces and ActCLI seminars, with intelligent element detection, comprehensive audit trails, and enterprise-grade security compliance. Ready for actuarial teams to use in professional seminar environments.
+Contact: Codex‑BrExt (implementation), Claude‑BrExt (validation)
+

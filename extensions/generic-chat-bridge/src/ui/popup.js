@@ -8,17 +8,49 @@ function setStatus(text) {
   if (el) el.textContent = text;
 }
 
-async function refreshConnectState() {
+function renderActivity(items) {
+  const box = document.getElementById('activity');
+  if (!box) return;
+  box.innerHTML = '';
+  (items || []).slice(-20).forEach(it => {
+    const div = document.createElement('div');
+    const dir = it.dir === 'out' ? '→' : '←';
+    const who = it.alias || it.participant_id || 'unknown';
+    const t = (it.text || '').replace(/\n/g, ' ');
+    div.textContent = `${dir} ${who}: ${t}`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function refreshLinkStatus() {
   try {
     const tab = await getActiveTab();
-    const btn = document.getElementById('connect');
-    if (!tab?.id) { btn?.setAttribute('disabled', 'true'); return; }
-    const h = await chrome.tabs.sendMessage(tab.id, { type: 'content.health' });
-    if (h?.ok) btn?.removeAttribute('disabled'); else btn?.setAttribute('disabled', 'true');
-  } catch {
-    const btn = document.getElementById('connect');
-    btn?.setAttribute('disabled', 'true');
-  }
+    if (!tab?.id) { return; }
+    const [h, profRes] = await Promise.all([
+      chrome.tabs.sendMessage(tab.id, { type: 'content.health' }).catch(() => null),
+      (async () => {
+        const origin = tab?.url ? new URL(tab.url).origin : null;
+        if (!origin) return null;
+        return await chrome.runtime.sendMessage({ type: 'bridge.getProfile', origin });
+      })()
+    ]);
+    const ok = h?.ok;
+    const healthEl = document.getElementById('healthStatus');
+    if (healthEl) healthEl.textContent = ok ? 'OK' : 'Not Linked';
+    const prof = profRes?.profile || null;
+    const chip = (id, label, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const v = val ? String(val) : '—';
+      el.textContent = `${label}: ${v}`;
+      el.title = v;
+    };
+    chip('chipInput', 'Input', prof?.input || null);
+    chip('chipSend', 'Send', prof?.send || '__ENTER__');
+    chip('chipHistory', 'History', prof?.history || null);
+    // Link is optional; do not gate send button on link health
+  } catch {}
 }
 
 async function init() {
@@ -28,64 +60,94 @@ async function init() {
     document.getElementById('semhost').value = r?.config?.semhostUrl || 'http://127.0.0.1:7530';
   } catch {}
 
+  // Load state
+  try {
+    const tab = await getActiveTab();
+    const origin = tab?.url ? new URL(tab.url).origin : null;
+    if (origin) {
+      const st = await chrome.runtime.sendMessage({ type: 'bridge.state.get', origin });
+      const s = st?.state || {};
+      if (s.session_id) document.getElementById('sessionId').value = s.session_id;
+      if (s.display_name) document.getElementById('displayName').value = s.display_name;
+      if (s.avatar) document.getElementById('avatar').value = s.avatar;
+    }
+  } catch {}
+
   document.getElementById('saveCfg').addEventListener('click', async () => {
     const semhostUrl = document.getElementById('semhost').value.trim();
     await chrome.runtime.sendMessage({ type: 'config.set', config: { semhostUrl } });
     setStatus('Saved Semhost URL');
   });
 
+  // Session join/leave
+  document.getElementById('join').addEventListener('click', async () => {
+    const tab = await getActiveTab();
+    const origin = tab?.url ? new URL(tab.url).origin : null;
+    if (!origin) { setStatus('No active tab/origin'); return; }
+    const session_id = document.getElementById('sessionId').value.trim();
+    const display_name = document.getElementById('displayName').value.trim() || 'Web Participant';
+    const avatar = document.getElementById('avatar').value.trim() || '';
+    setStatus('Joining…');
+    const r = await chrome.runtime.sendMessage({ type: 'bridge.join', origin, session_id, display_name, avatar });
+    if (r?.ok) {
+      setStatus('Joined seminar');
+      await chrome.runtime.sendMessage({ type: 'bridge.subscribe.start', origin });
+    } else {
+      setStatus('Join failed');
+    }
+  });
+  document.getElementById('leave').addEventListener('click', async () => {
+    const tab = await getActiveTab();
+    const origin = tab?.url ? new URL(tab.url).origin : null;
+    if (!origin) { setStatus('No active tab/origin'); return; }
+    await chrome.runtime.sendMessage({ type: 'bridge.subscribe.stop', origin });
+    await chrome.runtime.sendMessage({ type: 'bridge.leave', origin });
+    setStatus('Left seminar');
+  });
+
+  // Compose send
+  async function doSend() {
+    const text = document.getElementById('composeText').value;
+    if (!text?.trim()) return;
+    setStatus('Sending…');
+    const r = await chrome.runtime.sendMessage({ type: 'bridge.sendText', text });
+    if (r?.ok) {
+      setStatus('Sent');
+      document.getElementById('composeText').value = '';
+    } else {
+      setStatus('Send failed');
+    }
+  }
+  document.getElementById('sendNow').addEventListener('click', doSend);
+  document.getElementById('composeText').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+  });
+
+  // Link page actions
   document.getElementById('pick').addEventListener('click', async () => {
-    setStatus('Picking: click Input → Send (Enter to skip) → History');
+    setStatus('Pick: click Input → Send (Enter to skip) → History');
     await chrome.runtime.sendMessage({ type: 'bridge.pickStart' });
   });
-
   document.getElementById('validate').addEventListener('click', async () => {
     setStatus('Validating…');
-    const text = document.getElementById('testText').value || 'Hello from ActCLI';
+    const text = 'Hello from ActCLI';
     const r = await chrome.runtime.sendMessage({ type: 'bridge.validate', text });
-    if (r?.ok) setStatus('Validate: OK' + (r.observed ? ' (observed history append)' : ''));
+    if (r?.ok) setStatus('Validate OK' + (r.observed ? ' (observed)' : ''));
     else setStatus('Validate failed: ' + (r?.error || 'unknown'));
-    await refreshConnectState();
+    await refreshLinkStatus();
   });
-
   document.getElementById('health').addEventListener('click', async () => {
-    setStatus('Health…');
-    const tab = await getActiveTab();
-    if (!tab?.id) { setStatus('No active tab'); return; }
-    const ok = await chrome.tabs.sendMessage(tab.id, { type: 'content.health' });
-    setStatus(ok?.ok ? 'Health: OK' : 'Health: missing input/history or profile');
-    await refreshConnectState();
+    await refreshLinkStatus();
+    setStatus('Checked link');
   });
-
   document.getElementById('autoMap').addEventListener('click', async () => {
     const tab = await getActiveTab();
     if (!tab?.id) { setStatus('No active tab'); return; }
-    setStatus('Auto-mapping…');
+    setStatus('Auto‑linking…');
     const r = await chrome.tabs.sendMessage(tab.id, { type: 'content.autoMap' });
-    if (r?.ok) setStatus('Auto-map OK'); else setStatus('Auto-map failed');
-    await refreshConnectState();
+    if (r?.ok) setStatus('Auto‑link OK'); else setStatus('Auto‑link failed');
+    await refreshLinkStatus();
   });
-
-  document.getElementById('connect').addEventListener('click', async () => {
-    const tab = await getActiveTab();
-    if (!tab?.id) { setStatus('No active tab'); return; }
-    // Require mapped page (health OK) before connecting
-    const h = await chrome.tabs.sendMessage(tab.id, { type: 'content.health' });
-    if (!h?.ok) { setStatus('Map page first: Pick + Health must be OK'); return; }
-    setStatus('Connecting…');
-    const r = await chrome.runtime.sendMessage({ type: 'bridge.connect' });
-    if (r?.ok) setStatus('Connected for origin: ' + (r.origin || '(unknown)'));
-    else setStatus('Connect failed');
-  });
-
-  document.getElementById('disconnect').addEventListener('click', async () => {
-    const tab = await getActiveTab();
-    const origin = tab?.url ? new URL(tab.url).origin : null;
-    if (origin) await chrome.runtime.sendMessage({ type: 'bridge.deleteProfile', origin });
-    setStatus('Disconnected (profile cleared)');
-    await refreshConnectState();
-  });
-
   document.getElementById('export').addEventListener('click', async () => {
     const tab = await getActiveTab();
     const origin = tab?.url ? new URL(tab.url).origin : null;
@@ -95,11 +157,10 @@ async function init() {
     const blob = new Blob([JSON.stringify({ origin, profile }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `actcli-bridge-${(new URL(tab.url)).hostname}.json`;
-    a.click(); setStatus('Exported profile');
+    a.href = url; a.download = `actcli-link-${(new URL(tab.url)).hostname}.json`;
+    a.click(); setStatus('Exported link');
     setTimeout(() => URL.revokeObjectURL(url), 500);
   });
-
   document.getElementById('import').addEventListener('click', async () => {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = 'application/json';
@@ -113,8 +174,8 @@ async function init() {
         const origin = tab?.url ? new URL(tab.url).origin : null;
         if (!origin) { setStatus('Import failed: no origin'); return; }
         await chrome.runtime.sendMessage({ type: 'bridge.saveProfile', origin, profile });
-        setStatus('Imported profile');
-        await refreshConnectState();
+        setStatus('Imported link');
+        await refreshLinkStatus();
       } catch (e) {
         setStatus('Import failed: invalid JSON');
       }
@@ -122,7 +183,18 @@ async function init() {
     input.click();
   });
 
-  await refreshConnectState();
+  // Periodic refresh
+  setInterval(async () => {
+    try {
+      const tab = await getActiveTab();
+      const origin = tab?.url ? new URL(tab.url).origin : null;
+      if (!origin) return;
+      const a = await chrome.runtime.sendMessage({ type: 'bridge.activity.get', origin });
+      renderActivity(a?.activity || []);
+    } catch {}
+  }, 1500);
+
+  await refreshLinkStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);

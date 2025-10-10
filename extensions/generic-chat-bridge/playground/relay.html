@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground: Relay (sem ↔ remote)</title>
+    <style>
+      :root { --bg:#0b0c10; --panel:#0f172a; --muted:#9ca3af; --border:#1f2937; --text:#e5e7eb; --bubble:#111827; --out:#0b3d3a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background: var(--bg); color: var(--text); }
+      header { background: var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding: 10px 12px; }
+      .title { font-weight:600; }
+      .muted { color: var(--muted); font-size:12px; }
+      .wrap { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 52px); }
+      .col { display:grid; grid-template-rows: 44px 1fr 84px; border-right:1px solid var(--border); }
+      .col:last-child { border-right: none; }
+      .head { background:#0e1621; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; padding: 8px 10px; }
+      .room { font-weight:600; }
+      .hist { overflow:auto; padding: 12px; }
+      .message { margin:6px 0; display:flex; }
+      .bubble { background: var(--bubble); border:1px solid var(--border); border-radius: 10px; padding: 8px 10px; max-width:85%; }
+      .outgoing .bubble { background:#0e2f2e; }
+      .composer { background: var(--panel); border-top:1px solid var(--border); display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:10px; }
+      .btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius: 50%; border:1px solid var(--border); background:#0f172a; color:#a7f3d0; cursor:pointer; }
+      .ce { min-height: 52px; max-height: 120px; overflow:auto; padding: 8px; border:1px solid var(--border); border-radius: 10px; background:#111827; }
+      label { user-select: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Relay (Seminar ↔ Remote)</div>
+      <div class="muted">Map the left (Seminar). Right emulates a remote user.</div>
+      <label style="margin-left:12px"><input type="checkbox" id="mirrorR2S" checked/> Mirror Remote → Seminar</label>
+      <label style="margin-left:12px"><input type="checkbox" id="mirrorS2R" checked/> Mirror Seminar → Remote</label>
+    </header>
+    <div class="wrap">
+      <section class="col" aria-label="seminar-col">
+        <div class="head"><div class="room">Seminar</div></div>
+        <div id="sem-history" class="hist" role="list" aria-label="history">
+          <div class="message"><div class="bubble">Welcome to Seminar</div></div>
+        </div>
+        <div class="composer">
+          <div class="btn" title="Attach">📎</div>
+          <div id="sem-input" class="ce" contenteditable="true" role="textbox" aria-label="message" data-qa="relay-left-input"></div>
+          <div id="sem-send" class="btn" title="Send" aria-label="Send">➤</div>
+        </div>
+      </section>
+      <section class="col" aria-label="remote-col">
+        <div class="head"><div class="room">Remote</div></div>
+        <div id="rem-history" class="hist" role="list" aria-label="remote-history">
+          <div class="message"><div class="bubble">Remote joined</div></div>
+        </div>
+        <div class="composer">
+          <div class="btn" title="Attach">📎</div>
+          <div id="rem-input" class="ce" contenteditable="true" role="textbox" aria-label="remote-message" data-qa="relay-right-input"></div>
+          <div id="rem-send" class="btn" title="Send" aria-label="Remote Send">➤</div>
+        </div>
+      </section>
+    </div>
+    <script>
+      const semHist = document.getElementById('sem-history');
+      const semInput = document.getElementById('sem-input');
+      const semSend = document.getElementById('sem-send');
+      const remHist = document.getElementById('rem-history');
+      const remInput = document.getElementById('rem-input');
+      const remSend = document.getElementById('rem-send');
+      const mirrorR2S = document.getElementById('mirrorR2S');
+      const mirrorS2R = document.getElementById('mirrorS2R');
+
+      function addMsg(hist, t, out=false){
+        const m = document.createElement('div'); m.className='message'+(out?' outgoing':'');
+        const b = document.createElement('div'); b.className='bubble'; b.textContent=t; m.appendChild(b);
+        hist.appendChild(m); hist.scrollTop = hist.scrollHeight;
+      }
+      function txt(el){ return el.innerText.trim(); }
+      function clr(el){ el.innerText=''; }
+
+      function semDoSend(){ const t=txt(semInput); if(!t) return; addMsg(semHist, t, true); clr(semInput); if(mirrorS2R.checked) addMsg(remHist, t, false); }
+      function remDoSend(){ const t=txt(remInput); if(!t) return; addMsg(remHist, t, true); clr(remInput); if(mirrorR2S.checked) addMsg(semHist, t, false); }
+
+      semSend.addEventListener('click', semDoSend);
+      remSend.addEventListener('click', remDoSend);
+      semInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); semDoSend(); } });
+      remInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); remDoSend(); } });
+    </script>
+  </body>
+  </html>
+
