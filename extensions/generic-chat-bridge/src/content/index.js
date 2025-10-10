@@ -262,6 +262,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(r);
       return;
     }
+    if (msg?.type === 'content.sendText') {
+      const { text } = msg;
+      const r = await validateTextInternal(text);
+      sendResponse(r);
+      return;
+    }
+    if (msg?.type === 'content.forwardText') {
+      const { text } = msg;
+      const r = await validateTextInternal(text);
+      sendResponse(r);
+      return;
+    }
     if (msg?.type === 'content.injectProfile') {
       const prof = msg.profile || {};
       await saveProfile(prof);

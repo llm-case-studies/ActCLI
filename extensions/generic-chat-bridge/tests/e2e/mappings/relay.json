@@ -1,0 +1,6 @@
+{
+  "input": "[data-qa=\"relay-left-input\"]",
+  "send": "__KEY:Enter__",
+  "history": "#sem-history"
+}
+
