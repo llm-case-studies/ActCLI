@@ -12,6 +12,8 @@ dependencies = [
   "readchar>=4.0.5",
   "fastapi>=0.112.0",
   "pydantic>=2.6.0",
+  "websockets>=12.0",
+  "uvicorn>=0.30.0",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +35,8 @@ excel = ["openpyxl>=3.1.2"]
 
 [project.scripts]
 actcli = "actcli.cli:main"
+actcli-wrap = "actcli.wrapper.cli:app"
+actcli-facilitator = "actcli.wrapper.cli:app"
 
 [build-system]
 requires = ["hatchling"]
