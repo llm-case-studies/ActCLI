@@ -115,7 +115,7 @@ class PTYWrapper:
             while True:
                 # Check what's ready to read
                 readable, _, _ = select.select(
-                    [sys.stdin, master_fd], [], [], 0.1
+                    [sys.stdin.fileno(), master_fd], [], [], 0.1
                 )
 
                 # Check message queue (non-blocking)
@@ -132,14 +132,14 @@ class PTYWrapper:
                             # EOF
                             return
 
-                        if fd == sys.stdin:
+                        if fd == sys.stdin.fileno():
                             # User input → forward to child
                             os.write(master_fd, data)
                             if self.on_input:
                                 self.on_input(data.decode('utf-8', errors='ignore'))
 
                         elif fd == master_fd:
-                            # Child output → forward to stdout
+                            # Child output → forward to stdout (needed for terminal display)
                             os.write(sys.stdout.fileno(), data)
                             if self.on_output:
                                 self.on_output(data.decode('utf-8', errors='ignore'))
@@ -165,34 +165,94 @@ async def wrap_ai_cli_async(
         facilitator_client: Connected FacilitatorClient
         participant_name: Name for this participant
     """
-    wrapper = PTYWrapper(command)
+    loop = asyncio.get_event_loop()
+
+    # Buffer to accumulate input until newline
+    input_buffer = []
+
+    # Callback for when user types input
+    def on_user_input(text: str):
+        """Forward user input to facilitator."""
+        # Buffer characters until we get a newline
+        input_buffer.append(text)
+
+        # Check if we have a complete line
+        combined = ''.join(input_buffer)
+        if '\n' in combined or '\r' in combined:
+            # Extract complete lines
+            lines = combined.splitlines(keepends=True)
+
+            # Keep incomplete line in buffer
+            if lines and not (lines[-1].endswith('\n') or lines[-1].endswith('\r')):
+                incomplete = lines.pop()
+                input_buffer.clear()
+                input_buffer.append(incomplete)
+            else:
+                input_buffer.clear()
+
+            # Send complete lines to facilitator
+            for line in lines:
+                clean_line = line.strip()
+                if clean_line:  # Don't send empty lines
+                    asyncio.run_coroutine_threadsafe(
+                        facilitator_client.send_message(
+                            content=clean_line,
+                            to="all",
+                            msg_type="chat",
+                        ),
+                        loop
+                    )
+
+    # Callback for when AI outputs
+    def on_ai_output(text: str):
+        """Forward AI output to facilitator."""
+        # Send output to facilitator so other participants see responses
+        asyncio.run_coroutine_threadsafe(
+            facilitator_client.send_message(
+                content=text,
+                to="all",
+                msg_type="chat",
+            ),
+            loop
+        )
+
+    wrapper = PTYWrapper(
+        command=command,
+        on_input=on_user_input,
+        on_output=None,  # DISABLE output forwarding to prevent echo loops with 'cat'
+    )
 
     # Callback for when facilitator sends messages
     async def on_facilitator_message(data: dict):
         """Handle messages from facilitator."""
         if data.get("type") == "chat":
             content = data.get("content", "")
+            from_participant = data.get("from", "")
+
+            # Don't echo our own messages back
+            if from_participant == facilitator_client.participant_id:
+                return
+
             from_name = data.get("from_name", "Unknown")
 
             # Format the message nicely
             formatted = f"\n[{from_name}]: {content}\n"
             wrapper.inject_message(formatted)
 
-    # Callback for when AI outputs
-    def on_ai_output(text: str):
-        """Forward AI output to facilitator."""
-        # TODO: Parse AI output and send to facilitator
-        # For now, just print
-        pass
-
-    # Start listening to facilitator
+    # Start listening to facilitator in background
     listen_task = asyncio.create_task(
         facilitator_client.listen(on_facilitator_message)
     )
 
-    # Run the wrapper (this blocks)
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, wrapper.run)
-
-    # Cleanup
-    listen_task.cancel()
+    # Run the wrapper in executor, but keep event loop alive
+    try:
+        await loop.run_in_executor(None, wrapper.run)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Cleanup
+        listen_task.cancel()
+        try:
+            await listen_task
+        except asyncio.CancelledError:
+            pass

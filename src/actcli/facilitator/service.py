@@ -39,7 +39,13 @@ class FacilitatorService:
     """Smart facilitator service for multi-AI communication."""
 
     def __init__(self):
-        self.app = FastAPI(title="AI Facilitator Service")
+        self.app = FastAPI(
+            title="AI Facilitator Service",
+            description="WebSocket-based message routing for multi-AI communication",
+            version="1.0.0",
+            docs_url="/docs",
+            redoc_url="/redoc",
+        )
         self.sessions: Dict[str, Session] = {}
         self.websockets: Dict[str, WebSocket] = {}  # participant_id -> websocket
 
@@ -110,6 +116,26 @@ class FacilitatorService:
                 ],
                 "message_count": len(session.messages),
                 "is_broadcasting": session.is_broadcasting,
+            }
+
+        @self.app.get("/sessions/{session_id}/messages")
+        async def get_session_messages(
+            session_id: str,
+            limit: int = 50,
+            offset: int = 0
+        ):
+            """Get messages from a session."""
+            session = self.sessions.get(session_id)
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            messages = session.messages[offset:offset + limit]
+            return {
+                "session_id": session_id,
+                "total": len(session.messages),
+                "offset": offset,
+                "limit": limit,
+                "messages": [self._message_to_dict(msg) for msg in messages]
             }
 
         @self.app.post("/sessions/{session_id}/join")
@@ -207,6 +233,99 @@ class FacilitatorService:
                 del self.websockets[participant_id]
                 participant.status = ParticipantStatus.DISCONNECTED
 
+        @self.app.get("/viewer/{session_id}")
+        async def viewer_page(session_id: str):
+            """HTML viewer page for watching a session."""
+            from fastapi.responses import HTMLResponse
+
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Session Viewer - {session_id}</title>
+                <style>
+                    body {{
+                        font-family: monospace;
+                        background: #1e1e1e;
+                        color: #d4d4d4;
+                        padding: 20px;
+                        margin: 0;
+                    }}
+                    h1 {{ color: #4ec9b0; }}
+                    #messages {{
+                        border: 1px solid #3e3e3e;
+                        padding: 15px;
+                        height: 500px;
+                        overflow-y: auto;
+                        background: #252526;
+                        border-radius: 5px;
+                    }}
+                    .message {{
+                        margin: 10px 0;
+                        padding: 8px;
+                        background: #2d2d30;
+                        border-left: 3px solid #007acc;
+                        border-radius: 3px;
+                    }}
+                    .from {{ color: #4ec9b0; font-weight: bold; }}
+                    .time {{ color: #808080; font-size: 0.9em; }}
+                    .content {{ margin-top: 5px; }}
+                    #status {{
+                        color: #ce9178;
+                        margin: 10px 0;
+                        padding: 10px;
+                        background: #2d2d30;
+                        border-radius: 3px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <h1>🎬 AI Reality Show - Session Viewer</h1>
+                <div id="status">Connecting to session {session_id}...</div>
+                <div id="messages"></div>
+
+                <script>
+                    const sessionId = "{session_id}";
+                    const ws = new WebSocket(`ws://${{window.location.host}}/broadcast/${{sessionId}}`);
+                    const messagesDiv = document.getElementById('messages');
+                    const statusDiv = document.getElementById('status');
+
+                    ws.onopen = () => {{
+                        statusDiv.textContent = '✅ Connected - Watching live messages...';
+                        statusDiv.style.color = '#4ec9b0';
+                    }};
+
+                    ws.onmessage = (event) => {{
+                        const msg = JSON.parse(event.data);
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = 'message';
+
+                        const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+                        msgDiv.innerHTML = `
+                            <span class="from">${{msg.from_name}}</span>
+                            <span class="time">at ${{timestamp}}</span>
+                            <div class="content">${{msg.content}}</div>
+                        `;
+
+                        messagesDiv.appendChild(msgDiv);
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    }};
+
+                    ws.onerror = () => {{
+                        statusDiv.textContent = '❌ Connection error';
+                        statusDiv.style.color = '#f48771';
+                    }};
+
+                    ws.onclose = () => {{
+                        statusDiv.textContent = '⚠️ Connection closed';
+                        statusDiv.style.color = '#ce9178';
+                    }};
+                </script>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html_content)
+
         @self.app.websocket("/broadcast/{session_id}")
         async def broadcast_endpoint(websocket: WebSocket, session_id: str):
             """WebSocket endpoint for viewers (broadcast mode)."""
@@ -218,19 +337,27 @@ class FacilitatorService:
                 return
 
             session.viewer_count += 1
+            session.is_broadcasting = True
 
             try:
                 # Send session history
                 for msg in session.messages[-50:]:  # Last 50 messages
                     await websocket.send_json(self._message_to_dict(msg))
 
-                # Keep connection alive and stream new messages
+                # Store this viewer's websocket
+                viewer_id = f"viewer_{id(websocket)}"
+                self.websockets[viewer_id] = websocket
+
+                # Keep connection alive - new messages will be pushed
                 while True:
                     await asyncio.sleep(1)
-                    # Real-time messages will be pushed via broadcast
 
             except WebSocketDisconnect:
                 session.viewer_count -= 1
+                if viewer_id in self.websockets:
+                    del self.websockets[viewer_id]
+                if session.viewer_count == 0:
+                    session.is_broadcasting = False
 
     async def _route_message(self, session: Session, message: Message):
         """Route a message to appropriate recipient(s)."""
@@ -261,7 +388,8 @@ class FacilitatorService:
         if participant.websocket_id in self.websockets:
             ws = self.websockets[participant.websocket_id]
             try:
-                await ws.send_json(self._message_to_dict(message))
+                msg_dict = self._message_to_dict(message)
+                await ws.send_json(msg_dict)
                 message.delivered = True
             except Exception:
                 # WebSocket closed, queue the message
@@ -269,8 +397,15 @@ class FacilitatorService:
 
     async def _broadcast_to_viewers(self, session: Session, message: Message):
         """Broadcast a message to all viewers."""
-        # TODO: Implement viewer websocket tracking
-        pass
+        msg_dict = self._message_to_dict(message)
+        # Send to all viewer websockets
+        for ws_id, ws in list(self.websockets.items()):
+            if ws_id.startswith("viewer_"):
+                try:
+                    await ws.send_json(msg_dict)
+                except Exception:
+                    # Viewer disconnected
+                    pass
 
     async def _handle_websocket_message(
         self, session: Session, participant: Participant, data: dict
@@ -296,10 +431,16 @@ class FacilitatorService:
 
     def _message_to_dict(self, message: Message) -> dict:
         """Convert message to dict for JSON serialization."""
+        # Get sender name from session
+        session = self.sessions.get(message.session_id)
+        sender = session.get_participant(message.from_id) if session else None
+        from_name = sender.name if sender else "Unknown"
+
         return {
             "id": message.id,
             "session_id": message.session_id,
             "from": message.from_id,
+            "from_name": from_name,
             "to": message.to_id,
             "type": message.type,
             "content": message.content,
