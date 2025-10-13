@@ -13,13 +13,32 @@ from typing import Callable, List, Optional
 
 def strip_ansi_codes(text: str) -> str:
     """Remove ANSI escape codes from text."""
-    # Pattern for ANSI escape sequences
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    return ansi_escape.sub('', text)
+    # Comprehensive pattern for ANSI escape sequences
+    # Includes CSI, OSC, and other terminal control sequences
+    patterns = [
+        r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])',  # Standard ANSI
+        r'\x1B\][^\x07]*\x07',  # OSC sequences
+        r'\x1B\][^\x1B]*\x1B\\',  # OSC with ESC terminator
+        r'\x1B[PX^_][^\x1B]*\x1B\\',  # DCS, SOS, PM, APC
+        r'\x1B[\[\]()][0-9;]*[A-Za-z<>]',  # Various CSI
+    ]
+
+    result = text
+    for pattern in patterns:
+        result = re.sub(pattern, '', result)
+
+    return result
 
 
 def is_control_sequence(text: str) -> bool:
     """Check if text is a terminal control sequence that should be filtered."""
+    # Strip whitespace for checking
+    text_stripped = text.strip()
+
+    # Empty or whitespace-only
+    if not text_stripped:
+        return True
+
     # Mouse tracking events in various formats:
     # <35;74;42M or \x1B[<35;74;42M or just M<35;74;42M
     if re.search(r'[<M]\d+;\d+;\d+[Mm]', text):
@@ -33,8 +52,20 @@ def is_control_sequence(text: str) -> bool:
     if re.match(r'^\](\d+);', text):
         return True
 
-    # CSI sequences that are just control codes
-    if re.match(r'^\x1B\[[\d;]*[A-Za-z]$', text) and len(text) < 20:
+    # CSI sequences that are just control codes (including cursor queries)
+    if re.search(r'\x1B\[[\d;?]*[A-Za-z<>]', text):
+        return True
+
+    # Bracketed paste mode: ?[?2004h or ?[?2004l
+    if re.search(r'\?\[\??\d+[hl]', text):
+        return True
+
+    # Cursor position queries: ?[6n or similar
+    if re.search(r'\?\[[\d;]*[A-HJKSTfmnsur]', text):
+        return True
+
+    # Error messages about cursor position
+    if 'cursor position could not be read' in text.lower():
         return True
 
     # Any text that's mostly just numbers, semicolons and M (likely mouse data)
@@ -150,11 +181,15 @@ class PTYWrapper:
             import time
             time.sleep(0.1)
 
-            # Disable mouse tracking in the child terminal
-            # Send ANSI codes to turn off various mouse tracking modes
+            # Disable problematic terminal features
+            # Send ANSI codes to turn off various modes that cause control sequences
             try:
-                # Disable all mouse tracking modes
+                # Disable mouse tracking modes
                 os.write(master_fd, b'\x1B[?9l\x1B[?1000l\x1B[?1001l\x1B[?1002l\x1B[?1003l\x1B[?1006l\x1B[?1015l')
+                # Disable bracketed paste mode (causes ?2004h/l)
+                os.write(master_fd, b'\x1B[?2004l')
+                # Disable focus reporting
+                os.write(master_fd, b'\x1B[?1004l')
             except:
                 pass  # If writes fail, continue anyway
 
