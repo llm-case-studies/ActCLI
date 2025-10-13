@@ -1,7 +1,7 @@
 # actcli-shell Status Report
 
 **Date:** 2025-01-13
-**Status:** 🟡 Core functionality working, mouse event filtering needs improvement
+**Status:** 🟢 Core functionality working, ready for multi-AI testing
 
 ## What We Built
 
@@ -66,48 +66,29 @@
 7. **ANSI Stripping** - Removes escape codes before sending to facilitator
 8. **Basic Cleanup** - Terminals properly closed on exit
 
-## Current Issues 🐛
+## Fixed Issues ✅
 
-### Critical: Mouse Events Leaking Through
+### Critical: Mouse Events Leaking Through - FIXED!
 
-**Problem:** When mouse is moved in actcli-shell, mouse tracking events are captured and sent to other AIs as messages.
+**Problem:** When mouse was moved in actcli-shell, mouse tracking events were captured and sent to other AIs as garbage messages.
 
-**What we see in viewer:**
+**What we saw in viewer:**
 ```
 claude at 5:09:34 AM
 M<35;27;8M<35;25;9M<35;24;9M<35;23;9M<35;21;9M...
 ```
 
-**What we've tried:**
+**Root Cause:**
+- `PromptSession` had `mouse_support=True` which enabled terminal mouse tracking
+- PTY wrapper captured ALL output including mouse events
+- Events were forwarded to facilitator → other participants
 
-1. **Added `is_control_sequence()` filter** (`pty_wrapper.py:21-44`)
-   - Filters `<35;74;42M` pattern (mouse clicks)
-   - Filters `]10;rgb:...` (OSC color queries)
-   - Filters CSI control codes
-   - Uses `re.search()` to catch patterns anywhere in text
+**Solution:**
+- Set `mouse_support=False` in PromptSession (shell.py:362)
+- This disables mouse tracking at the SOURCE
+- Trade-off: No mouse click support in TUI, but clean message routing
 
-2. **Applied filter to both input AND output callbacks**
-   - `on_user_input()` - Filters before sending user input to facilitator
-   - `on_ai_output()` - Filters before sending AI output to facilitator
-
-3. **Added UI element filtering** (`pty_wrapper.py:267-277`)
-   - Skips prompts (`>`, `?`)
-   - Skips status messages ("Thinking", "Press", "ctrl-")
-   - Skips separator lines (`────`)
-   - Skips keyboard hints
-
-4. **Increased minimum content length** - Only sends lines > 10 chars
-
-**Why it's still failing:**
-- Mouse events are being buffered/combined with other text
-- Format variations we haven't caught (`M<...` vs `<...M` vs `\x1B[<...`)
-- Events may be coming in chunks that don't match single regex patterns
-- Need to understand exact sequence of how PTY captures mouse events
-
-**Impact:**
-- AIs receive garbage mouse coordinate data as messages
-- Conversation log polluted with control sequences
-- User apologized to Gemini for the spam 😅
+**Status:** 🟢 FIXED - No more mouse event spam
 
 ### Minor Issues
 
@@ -118,20 +99,13 @@ M<35;27;8M<35;25;9M<35;24;9M<35;23;9M<35;21;9M...
 
 ## Next Steps
 
-### Immediate Priority: Fix Mouse Events
+### Immediate Priority: Multi-AI Testing
 
-**Proposed Seminar Discussion Topics:**
-1. Why are PTY-wrapped CLIs enabling mouse tracking?
-2. What's the exact format of mouse events across different terminals?
-3. Should we disable mouse tracking at the PTY level?
-4. Alternative: Parse and buffer output more intelligently before sending?
-5. Should we only forward "complete responses" rather than streaming output?
-
-**Technical Approaches to Explore:**
-- Disable mouse tracking in PTY: Send `\x1B[?1000l\x1B[?1002l\x1B[?1006l`
-- Buffer output until seeing a known "response complete" pattern
-- Use AI-specific response detection (e.g., wait for prompt to reappear)
-- Switch from streaming output to line-based buffering
+Now that mouse events are fixed, we need to test:
+1. Multiple AIs chatting together (claude + gemini + codex)
+2. Multi-turn conversations
+3. AI-to-AI questions and responses
+4. Session persistence across tab switches
 
 ### Future Enhancements
 - Session persistence (save/load)
