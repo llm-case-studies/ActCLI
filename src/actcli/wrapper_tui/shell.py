@@ -273,7 +273,39 @@ Keybindings:
 
 
 def main():
-    """Entry point for actcli-shell command."""
+    """
+    Entry point for actcli-shell command.
+
+    actcli-shell - Multi-terminal TUI for AI collaboration.
+
+    Features:
+    - Tab-based terminal navigation
+    - Auto-created local facilitator
+    - Slash commands for control
+    - Real-time multi-AI conversations
+
+    Usage:
+        actcli-shell              # Launch the TUI
+
+    Slash commands (inside TUI):
+        /add <name> <cmd>        # Add new terminal
+        /switch <tab>            # Switch to terminal tab
+        /close                   # Close current terminal
+        /quit                    # Exit application
+    """
+    import sys
+
+    # Handle --help flag
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h", "help"]:
+        print(main.__doc__)
+        return
+
+    # Check if running in a TTY
+    if not sys.stdin.isatty():
+        print("Error: actcli-shell requires a TTY terminal to run.", file=sys.stderr)
+        print("Please run this command in a real terminal, not in a pipe or redirect.", file=sys.stderr)
+        sys.exit(1)
+
     shell = Shell()
     shell.run()
 
