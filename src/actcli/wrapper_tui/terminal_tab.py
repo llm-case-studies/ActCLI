@@ -95,10 +95,8 @@ class TerminalManager:
         tab.start()
         self.tabs.append(tab)
 
-        # Make it active if it's the first tab
-        if len(self.tabs) == 1:
-            self.active_index = 0
-            tab.is_active = True
+        # Always switch to the newly added tab
+        self.switch_tab(len(self.tabs) - 1)
 
         return tab
 

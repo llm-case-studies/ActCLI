@@ -1,0 +1,10 @@
+# External-Inputs/.gitignore
+# Don't commit raw intake - may contain API keys, personal context, or sensitive discussions
+intake/**
+!intake/.gitkeep
+
+# Commit reviewed/sanitized content only
+!triaged/**
+!incorporated/**
+!templates/**
+!README.md

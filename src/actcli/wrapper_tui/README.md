@@ -57,7 +57,17 @@ Each command appears as a new tab in the navbar.
 
 - **Ctrl+N** - Next tab
 - **Ctrl+P** - Previous tab
-- **Click/type** - Interact with active terminal
+- **Ctrl+T** - Toggle between control mode and terminal mode
+
+### Input Modes
+
+**Control mode** (`actcli-wrap>>>`):
+- Use slash commands (/add, /sessions, /connect, etc.)
+- Configure and manage terminals
+
+**Terminal mode** (`[terminal-name]>`):
+- Send input directly to the active terminal
+- Interact with wrapped applications (Gemini, cat, bc, etc.)
 
 ### Slash commands
 
@@ -69,11 +79,29 @@ Each command appears as a new tab in the navbar.
 /quit                 # Exit (or Ctrl+C)
 ```
 
-### Regular input
+### Example Workflow
 
-Anything not starting with `/` goes directly to the active terminal:
 ```bash
-actcli-wrap>>> What is 2+2?   # Sent to active terminal (e.g., Gemini)
+# Start actcli-shell
+actcli-shell
+
+# Add a terminal (control mode)
+actcli-wrap>>> /add gemini
+
+# Switch to terminal mode
+# Press Ctrl+T (prompt changes to [gemini]>)
+
+# Now interact with Gemini
+[gemini]> What is 2+2?
+
+# Switch back to control mode
+# Press Ctrl+T (prompt changes back to actcli-wrap>>>)
+
+# Add another terminal
+actcli-wrap>>> /add tree
+
+# Navigate between tabs
+# Press Ctrl+N to switch to tree tab
 ```
 
 ## Components

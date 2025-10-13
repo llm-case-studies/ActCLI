@@ -4,16 +4,45 @@ import asyncio
 import sys
 from typing import Optional
 
-from prompt_toolkit import Application
-from prompt_toolkit.buffer import Buffer
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.formatted_text import HTML, ANSI
+from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.layout import Layout, HSplit, VSplit, Window
-from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
-from prompt_toolkit.widgets import TextArea
-from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.styles import Style
+from prompt_toolkit.patch_stdout import patch_stdout
 
 from .session_manager import SessionManager
 from .terminal_tab import TerminalManager
+from .wrapped_terminal import WrappedTerminal
+
+
+class ShellCompleter(Completer):
+    """Command completer for actcli-shell."""
+
+    def __init__(self):
+        self.commands = {
+            "/add": "Add wrapped terminal (e.g., /add gemini)",
+            "/viewer": "Show viewer URL",
+            "/sessions": "List available sessions",
+            "/connect": "Connect to session",
+            "/help": "Show this help",
+            "/quit": "Exit actcli-shell",
+        }
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor.lower()
+
+        if not text.startswith("/"):
+            return
+
+        for cmd, desc in self.commands.items():
+            if cmd.lower().startswith(text):
+                yield Completion(
+                    cmd[len(text):],
+                    start_position=0,
+                    display=f"{cmd} - {desc}",
+                )
 
 
 class Shell:
@@ -30,35 +59,35 @@ class Shell:
     def __init__(self):
         self.session_manager = SessionManager()
         self.terminal_manager = TerminalManager()
-        self.command_buffer = Buffer()
-        self.output_lines = []
+        self.wrapped_terminals = {}  # name -> WrappedTerminal
+        self.history = InMemoryHistory()
+        self.completer = ShellCompleter()
         self.running = False
+        self.show_tab_switch_messages = True
 
     def get_navbar_text(self):
         """Generate navbar with terminal tabs."""
         tabs = self.terminal_manager.tabs
         if not tabs:
-            return HTML("<b>No terminals</b> - Use /add to create one")
+            return "No terminals - Use /add to create one"
 
         parts = []
         for i, tab in enumerate(tabs):
             if tab.is_active:
-                parts.append(f"<b>[{tab.name}]</b>")
+                # Active tab - bold and highlighted
+                parts.append(f"→ [{tab.name}] ←")
             else:
                 parts.append(f"[{tab.name}]")
 
-        parts.append("[+]")
-        return HTML(" ".join(parts))
+        return " ".join(parts) + " [+]"
 
     def get_status_text(self):
         """Generate status line."""
         session = self.session_manager.session
         if session:
-            return HTML(
-                f"<b>Session:</b> {session.session_id} | "
-                f"<b>Facilitator:</b> {session.facilitator_url}"
-            )
-        return HTML("<b>No session</b>")
+            viewer_url = f"{session.facilitator_url}/viewer/{session.session_id}"
+            return f"Session: {session.session_id} | Viewer: {viewer_url}"
+        return "No session"
 
     def get_terminal_output(self):
         """Get output from active terminal."""
@@ -75,50 +104,20 @@ class Shell:
             except:
                 pass
 
-        # Return last 1000 chars
-        return tab.output_buffer[-1000:]
+        # Return last 5000 chars
+        return tab.output_buffer[-5000:]
 
-    def create_layout(self):
-        """Create the TUI layout."""
-        # Status bar
-        status_window = Window(
-            content=FormattedTextControl(self.get_status_text),
-            height=1,
-        )
+    def create_style(self):
+        """Create visual style."""
+        return Style.from_dict({
+            "navbar": "bg:#003366 #ffffff bold",
+            "status": "bg:#1e1e1e #888888",
+            "prompt": "#00aaaa bold",
+            "output": "#cccccc",
+            "bottom-toolbar": "bg:#222222 #cccccc",
+        })
 
-        # Navbar
-        navbar_window = Window(
-            content=FormattedTextControl(self.get_navbar_text),
-            height=1,
-        )
-
-        # Terminal output area
-        terminal_output = Window(
-            content=FormattedTextControl(self.get_terminal_output),
-            wrap_lines=True,
-        )
-
-        # Command input area
-        command_input = TextArea(
-            prompt="actcli-wrap>>> ",
-            multiline=False,
-            height=1,
-        )
-        self.command_input = command_input
-
-        # Combine layout
-        layout = Layout(
-            HSplit([
-                status_window,
-                navbar_window,
-                terminal_output,
-                command_input,
-            ])
-        )
-
-        return layout
-
-    def create_keybindings(self):
+    def create_key_bindings(self):
         """Create key bindings."""
         kb = KeyBindings()
 
@@ -126,27 +125,44 @@ class Shell:
         def _(event):
             """Exit on Ctrl+C."""
             self.running = False
-            event.app.exit()
+            raise KeyboardInterrupt()
+
+        @kb.add("c-d")
+        def _(event):
+            """Exit on Ctrl+D."""
+            self.running = False
+            raise EOFError()
 
         @kb.add("c-n")
         def _(event):
             """Next tab on Ctrl+N."""
+            old_tab = self.terminal_manager.get_active_tab()
             self.terminal_manager.next_tab()
+            new_tab = self.terminal_manager.get_active_tab()
+            if old_tab != new_tab and new_tab and self.show_tab_switch_messages:
+                print(f"\n➡️  Switched to tab: {new_tab.name}\n")
 
         @kb.add("c-p")
         def _(event):
             """Previous tab on Ctrl+P."""
+            old_tab = self.terminal_manager.get_active_tab()
             self.terminal_manager.prev_tab()
-
-        @kb.add("enter")
-        def _(event):
-            """Handle command input."""
-            command = self.command_input.text.strip()
-            if command:
-                asyncio.create_task(self.handle_command(command))
-            self.command_input.text = ""
+            new_tab = self.terminal_manager.get_active_tab()
+            if old_tab != new_tab and new_tab and self.show_tab_switch_messages:
+                print(f"\n⬅️  Switched to tab: {new_tab.name}\n")
 
         return kb
+
+    def get_bottom_toolbar(self):
+        """Generate bottom toolbar."""
+        tab = self.terminal_manager.get_active_tab()
+        tab_info = f"Active: {tab.name}" if tab else "No active terminal"
+
+        return HTML(
+            f"<bottom-toolbar>{tab_info} | "
+            f"Ctrl+N: Next tab | Ctrl+P: Prev tab | Ctrl+C: Exit | "
+            f"Type /help for commands</bottom-toolbar>"
+        )
 
     async def handle_command(self, command: str):
         """Handle slash commands."""
@@ -159,110 +175,258 @@ class Shell:
 
             if cmd == "add" and len(parts) > 1:
                 await self.cmd_add(parts[1:])
+            elif cmd == "viewer":
+                await self.cmd_viewer()
             elif cmd == "sessions":
                 await self.cmd_sessions()
             elif cmd == "connect" and len(parts) > 1:
                 await self.cmd_connect(parts[1])
             elif cmd == "help":
                 await self.cmd_help()
+            elif cmd == "quit":
+                self.running = False
+                return "quit"
             else:
-                self.output_lines.append(f"Unknown command: {cmd}")
+                print(f"Unknown command: {cmd}")
         else:
             # Regular input - send to active terminal
             tab = self.terminal_manager.get_active_tab()
             if tab:
                 tab.write_input((command + "\n").encode())
+            else:
+                print("No active terminal. Use /add to create one.")
 
     async def cmd_add(self, args):
         """Add a new wrapped terminal: /add <command>"""
         command = args
         name = command[0] if command else "terminal"
 
+        # Add tab to manager
         tab = self.terminal_manager.add_tab(name, command)
-        self.output_lines.append(f"Added terminal: {name}")
+
+        # Create wrapped terminal connected to facilitator
+        if self.session_manager.session:
+            wrapped = WrappedTerminal(
+                name=name,
+                command=command,
+                session_id=self.session_manager.session.session_id,
+                facilitator_url=self.session_manager.facilitator_url,
+            )
+
+            print(f"\n⏳ Starting {name} and connecting to facilitator...")
+            success = await wrapped.start()
+
+            if success:
+                self.wrapped_terminals[name] = wrapped
+                print(f"✅ Connected: {name}")
+                print(f"📋 Now active. Type to interact, or /add to add more terminals.\n")
+            else:
+                # Remove tab if connection failed
+                self.terminal_manager.close_tab(len(self.terminal_manager.tabs) - 1)
+                print(f"❌ Failed to connect {name}\n")
+        else:
+            print(f"❌ No active session\n")
+
+    async def cmd_viewer(self):
+        """Show viewer URL: /viewer"""
+        session = self.session_manager.session
+        if session:
+            viewer_url = f"{session.facilitator_url}/viewer/{session.session_id}"
+            print(f"\n🔗 Live Viewer URL:")
+            print(f"   {viewer_url}")
+            print(f"\n💡 Open this URL in your browser to watch the conversation live!\n")
+        else:
+            print("\n❌ No active session\n")
 
     async def cmd_sessions(self):
         """List available sessions: /sessions"""
         sessions = await self.session_manager.list_sessions()
         if sessions:
-            self.output_lines.append("Available sessions:")
+            print("\nAvailable sessions:")
             for s in sessions:
-                self.output_lines.append(
-                    f"  {s['id']} - {s['name']} ({s['participant_count']} participants)"
-                )
+                print(f"  {s['id']} - {s['name']} ({s['participant_count']} participants)")
         else:
-            self.output_lines.append("No sessions available")
+            print("\nNo sessions available")
+        print()
 
     async def cmd_connect(self, session_id: str):
         """Connect to session: /connect <session_id>"""
         success = await self.session_manager.join_session(session_id, "shell")
         if success:
-            self.output_lines.append(f"Connected to session: {session_id}")
+            print(f"\n✅ Connected to session: {session_id}\n")
         else:
-            self.output_lines.append(f"Failed to connect to session: {session_id}")
+            print(f"\n❌ Failed to connect to session: {session_id}\n")
 
     async def cmd_help(self):
         """Show help."""
         help_text = """
-Available commands:
-  /add <command>        - Add wrapped terminal (e.g., /add gemini)
-  /sessions             - List available sessions
-  /connect <id>         - Connect to session
-  /help                 - Show this help
+╔════════════════════════════════════════════════════════════╗
+║                 actcli-shell Quick Help                    ║
+╚════════════════════════════════════════════════════════════╝
 
-Keybindings:
-  Ctrl+N - Next tab
-  Ctrl+P - Previous tab
-  Ctrl+C - Exit
+SLASH COMMANDS:
+  /add <command>        Add wrapped terminal (e.g., /add gemini)
+  /viewer               Show live viewer URL
+  /sessions             List available sessions
+  /connect <id>         Connect to session
+  /help                 Show this help
+  /quit                 Exit
+
+KEYBINDINGS:
+  Ctrl+N                Next tab
+  Ctrl+P                Previous tab
+  Ctrl+C                Exit
+
+USAGE:
+  1. Add terminals with /add (e.g., /add gemini, /add tree)
+  2. Navigate between tabs with Ctrl+N/P
+  3. Type directly to interact with active terminal
+  4. Use slash commands for control
+
+TERMINAL OUTPUT:
+  Terminal output appears above as you interact with the active
+  terminal. The navbar shows all open terminals.
+
+TIPS:
+  • Start simple: /add cat or /add bc
+  • Try AI: /add gemini or /add codex
+  • Docker: /add docker exec -it container bash
+  • Remote: /add ssh user@host "gemini"
+
+Press Enter to continue...
 """
-        self.output_lines.extend(help_text.strip().split("\n"))
+        print(help_text)
+
+    async def print_status(self):
+        """Print current status."""
+        print("\n" + "=" * 60)
+        print(f"📊 STATUS: {self.get_status_text()}")
+        print(f"📑 NAVBAR: {self.get_navbar_text()}")
+        print("=" * 60)
+
+        # Print terminal output if available
+        tab = self.terminal_manager.get_active_tab()
+        if tab:
+            output = self.get_terminal_output()
+            if output:
+                print("\n" + "─" * 60)
+                print(f"OUTPUT FROM: {tab.name}")
+                print("─" * 60)
+                # Print with ANSI codes
+                print(output)
+                print("─" * 60)
 
     async def initialize(self):
         """Initialize session and facilitator."""
-        self.output_lines.append("Starting local facilitator...")
+        print("\n" + "=" * 60)
+        print("🚀 Starting actcli-shell...")
+        print("=" * 60)
+
+        print("\n📡 Starting local facilitator...")
         success = await self.session_manager.start_local_facilitator()
 
         if success:
-            self.output_lines.append("✅ Facilitator started")
-            self.output_lines.append("Creating default session...")
+            print("✅ Facilitator started")
+            print("\n🎯 Creating default session...")
 
             success = await self.session_manager.create_default_session()
             if success:
-                self.output_lines.append(
-                    f"✅ Session created: {self.session_manager.session.session_id}"
-                )
-                self.output_lines.append("")
-                self.output_lines.append("Type /help for commands")
-                self.output_lines.append("Type /add <command> to start a terminal")
+                session_id = self.session_manager.session.session_id
+                viewer_url = f"{self.session_manager.facilitator_url}/viewer/{session_id}"
+
+                print(f"✅ Session created: {session_id}")
+                print(f"\n🔗 Live Viewer: {viewer_url}")
+                print("\n" + "=" * 60)
+                print("Type /help for commands")
+                print("Type /add <command> to start a terminal (e.g., /add gemini)")
+                print("Type /viewer to see the viewer URL again")
+                print("=" * 60 + "\n")
             else:
-                self.output_lines.append("❌ Failed to create session")
+                print("❌ Failed to create session")
         else:
-            self.output_lines.append("❌ Failed to start facilitator")
+            print("❌ Failed to start facilitator")
 
     async def run_async(self):
         """Async run loop."""
         # Initialize
         await self.initialize()
 
-        # Create application
-        app = Application(
-            layout=self.create_layout(),
-            key_bindings=self.create_keybindings(),
-            full_screen=True,
+        # Create session with bindings and style
+        session = PromptSession(
+            history=self.history,
+            completer=self.completer,
+            key_bindings=self.create_key_bindings(),
+            style=self.create_style(),
+            bottom_toolbar=self.get_bottom_toolbar,
+            complete_while_typing=False,
+            mouse_support=True,
         )
 
         self.running = True
 
-        # Run application
-        try:
-            await app.run_async()
-        finally:
-            self.cleanup()
+        # Main input loop
+        with patch_stdout():
+            while self.running:
+                try:
+                    # Print status before each prompt
+                    await self.print_status()
+
+                    # Get input
+                    text = await session.prompt_async(
+                        HTML("\n<prompt>actcli-shell></prompt> "),
+                        refresh_interval=0.1,  # Refresh for terminal output updates
+                    )
+
+                    # Handle None from Ctrl+D/Ctrl+C
+                    if text is None:
+                        break
+
+                    text = text.strip()
+                    if text:
+                        result = await self.handle_command(text)
+                        if result == "quit":
+                            break
+
+                    # Small delay to let terminal output accumulate
+                    await asyncio.sleep(0.1)
+
+                except (EOFError, KeyboardInterrupt):
+                    break
+
+        self.cleanup()
+
+    async def cleanup_async(self):
+        """Async cleanup of wrapped terminals."""
+        # Stop all wrapped terminals
+        for wrapped in self.wrapped_terminals.values():
+            try:
+                await wrapped.stop()
+            except Exception as e:
+                print(f"Warning: Error stopping {wrapped.name}: {e}")
 
     def cleanup(self):
         """Cleanup resources."""
+        print("\n\n🧹 Cleaning up...")
+
+        # Stop wrapped terminals using current event loop
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Schedule cleanup as task
+                for wrapped in self.wrapped_terminals.values():
+                    try:
+                        asyncio.create_task(wrapped.stop())
+                    except:
+                        pass
+            else:
+                # Run cleanup synchronously
+                asyncio.run(self.cleanup_async())
+        except:
+            pass
+
         self.terminal_manager.close_all()
         self.session_manager.cleanup()
+        print("👋 Goodbye!\n")
 
     def run(self):
         """Run the shell."""
