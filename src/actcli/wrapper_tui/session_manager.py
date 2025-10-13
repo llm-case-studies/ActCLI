@@ -45,7 +45,7 @@ class SessionManager:
             venv_bin = os.path.join(sys.prefix, "bin", "actcli-facilitator")
 
             self.facilitator_process = subprocess.Popen(
-                [venv_bin, "serve"],
+                [venv_bin],  # No 'serve' subcommand needed anymore
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
