@@ -359,7 +359,7 @@ Press Enter to continue...
             style=self.create_style(),
             bottom_toolbar=self.get_bottom_toolbar,
             complete_while_typing=False,
-            mouse_support=True,
+            mouse_support=False,  # Disable to prevent mouse events from leaking to other AIs
         )
 
         self.running = True
