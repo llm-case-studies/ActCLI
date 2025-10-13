@@ -146,6 +146,18 @@ class PTYWrapper:
             tty.setraw(sys.stdin)
 
         try:
+            # Give child process a moment to initialize
+            import time
+            time.sleep(0.1)
+
+            # Disable mouse tracking in the child terminal
+            # Send ANSI codes to turn off various mouse tracking modes
+            try:
+                # Disable all mouse tracking modes
+                os.write(master_fd, b'\x1B[?9l\x1B[?1000l\x1B[?1001l\x1B[?1002l\x1B[?1003l\x1B[?1006l\x1B[?1015l')
+            except:
+                pass  # If writes fail, continue anyway
+
             while True:
                 # Check what's ready to read
                 readable, _, _ = select.select(
