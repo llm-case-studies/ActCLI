@@ -196,7 +196,12 @@ def run_chat_repl(
 
 
 def run_vscode_style_repl(
-    initial_multi: str, rounds: int, timeout_s: int, ollama_host: str | None = None
+    initial_multi: str,
+    rounds: int,
+    timeout_s: int,
+    ollama_host: str | None = None,
+    max_rounds: int | None = None,
+    round_window: int = 2,
 ) -> None:
     """VSCode-style REPL with sidebar and multi-model integration."""
     from ..ui.vscode_layout import create_vscode_actcli
