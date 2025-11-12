@@ -3,7 +3,7 @@ name = "actcli"
 version = "0.0.1"
 description = "ActCLI — terminal-native actuarial workflows with multi-model roundtable chat"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "typer>=0.12.0",
   "rich>=13.0.0",
@@ -35,8 +35,9 @@ excel = ["openpyxl>=3.1.2"]
 
 [project.scripts]
 actcli = "actcli.cli:main"
-actcli-wrap = "actcli.wrapper.cli:app"
-actcli-facilitator = "actcli.wrapper.cli:app"
+actcli-wrap = "actcli.wrapper.wrap_cli:app"
+actcli-facilitator = "actcli.wrapper.facilitator_cli:app"
+actcli-shell = "actcli.wrapper_tui.shell:main"
 
 [build-system]
 requires = ["hatchling"]

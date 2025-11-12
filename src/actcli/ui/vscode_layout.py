@@ -615,7 +615,10 @@ Type your question below or use slash commands:
                 plain_lines.append(plain)
             plain_text = "\n\n".join(plain_lines)
 
-        self.chat_buffer.text = plain_text
+        # Update read-only buffer using document replacement
+        self.chat_buffer.set_document(
+            Document(text=plain_text, cursor_position=0), bypass_readonly=True
+        )
 
     def run(self):
         """Run the application."""

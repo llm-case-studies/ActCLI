@@ -3,11 +3,76 @@
 import asyncio
 import os
 import pty
+import re
 import select
 import sys
 import termios
 import tty
 from typing import Callable, List, Optional
+
+
+def strip_ansi_codes(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    # Comprehensive pattern for ANSI escape sequences
+    # Includes CSI, OSC, and other terminal control sequences
+    patterns = [
+        r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])',  # Standard ANSI
+        r'\x1B\][^\x07]*\x07',  # OSC sequences
+        r'\x1B\][^\x1B]*\x1B\\',  # OSC with ESC terminator
+        r'\x1B[PX^_][^\x1B]*\x1B\\',  # DCS, SOS, PM, APC
+        r'\x1B[\[\]()][0-9;]*[A-Za-z<>]',  # Various CSI
+    ]
+
+    result = text
+    for pattern in patterns:
+        result = re.sub(pattern, '', result)
+
+    return result
+
+
+def is_control_sequence(text: str) -> bool:
+    """Check if text is a terminal control sequence that should be filtered."""
+    # Strip whitespace for checking
+    text_stripped = text.strip()
+
+    # Empty or whitespace-only
+    if not text_stripped:
+        return True
+
+    # Mouse tracking events in various formats:
+    # <35;74;42M or \x1B[<35;74;42M or just M<35;74;42M
+    if re.search(r'[<M]\d+;\d+;\d+[Mm]', text):
+        return True
+
+    # Mouse tracking with escape prefix
+    if re.search(r'\x1B\[<\d+;\d+;\d+[Mm]', text):
+        return True
+
+    # OSC (Operating System Command) sequences: ]10;rgb:... or ]11;rgb:...
+    if re.match(r'^\](\d+);', text):
+        return True
+
+    # CSI sequences that are just control codes (including cursor queries)
+    if re.search(r'\x1B\[[\d;?]*[A-Za-z<>]', text):
+        return True
+
+    # Bracketed paste mode: ?[?2004h or ?[?2004l
+    if re.search(r'\?\[\??\d+[hl]', text):
+        return True
+
+    # Cursor position queries: ?[6n or similar
+    if re.search(r'\?\[[\d;]*[A-HJKSTfmnsur]', text):
+        return True
+
+    # Error messages about cursor position
+    if 'cursor position could not be read' in text.lower():
+        return True
+
+    # Any text that's mostly just numbers, semicolons and M (likely mouse data)
+    if re.match(r'^[M<\d;]+[Mm]', text) and text.count(';') >= 2:
+        return True
+
+    return False
 
 
 class PTYWrapper:
@@ -112,6 +177,22 @@ class PTYWrapper:
             tty.setraw(sys.stdin)
 
         try:
+            # Give child process a moment to initialize
+            import time
+            time.sleep(0.1)
+
+            # Disable problematic terminal features
+            # Send ANSI codes to turn off various modes that cause control sequences
+            try:
+                # Disable mouse tracking modes
+                os.write(master_fd, b'\x1B[?9l\x1B[?1000l\x1B[?1001l\x1B[?1002l\x1B[?1003l\x1B[?1006l\x1B[?1015l')
+                # Disable bracketed paste mode (causes ?2004h/l)
+                os.write(master_fd, b'\x1B[?2004l')
+                # Disable focus reporting
+                os.write(master_fd, b'\x1B[?1004l')
+            except:
+                pass  # If writes fail, continue anyway
+
             while True:
                 # Check what's ready to read
                 readable, _, _ = select.select(
@@ -173,8 +254,17 @@ async def wrap_ai_cli_async(
     # Callback for when user types input
     def on_user_input(text: str):
         """Forward user input to facilitator."""
+        # Filter out control sequences
+        if is_control_sequence(text):
+            return
+
+        # Strip ANSI codes from input too
+        clean_text = strip_ansi_codes(text)
+        if not clean_text.strip():
+            return
+
         # Buffer characters until we get a newline
-        input_buffer.append(text)
+        input_buffer.append(clean_text)
 
         # Check if we have a complete line
         combined = ''.join(input_buffer)
@@ -203,23 +293,81 @@ async def wrap_ai_cli_async(
                         loop
                     )
 
+    # Buffer to accumulate AI output
+    output_buffer = []
+
     # Callback for when AI outputs
     def on_ai_output(text: str):
-        """Forward AI output to facilitator."""
-        # Send output to facilitator so other participants see responses
-        asyncio.run_coroutine_threadsafe(
-            facilitator_client.send_message(
-                content=text,
-                to="all",
-                msg_type="chat",
-            ),
-            loop
-        )
+        """Forward AI output to facilitator (with ANSI codes stripped)."""
+        # Filter out control sequences first
+        if is_control_sequence(text):
+            return
+
+        # Strip ANSI escape codes
+        clean_text = strip_ansi_codes(text)
+
+        # Skip if mostly whitespace or control chars
+        if not clean_text.strip():
+            return
+
+        # Skip common UI elements
+        skip_patterns = [
+            r'^>',  # Prompts
+            r'^\?',  # Question prompts
+            r'^Press',  # Instructions
+            r'^Thinking',  # Status messages
+            r'^ctrl-',  # Keyboard shortcuts
+            r'─{10,}',  # Separator lines
+            r'for shortcuts',  # UI hints
+            r'to toggle',  # UI hints
+            r'to edit',  # UI hints
+        ]
+        for pattern in skip_patterns:
+            if re.search(pattern, clean_text):
+                return
+
+        # Buffer until we have meaningful content
+        output_buffer.append(clean_text)
+        combined = ''.join(output_buffer)
+
+        # Send if we have a complete line or substantial content
+        if '\n' in combined or len(combined) > 100:
+            lines = combined.splitlines(keepends=True)
+
+            # Keep incomplete line in buffer
+            if lines and not lines[-1].endswith('\n'):
+                incomplete = lines.pop()
+                output_buffer.clear()
+                output_buffer.append(incomplete)
+            else:
+                output_buffer.clear()
+
+            # Send complete lines
+            for line in lines:
+                clean_line = line.strip()
+                # Only send substantial content (actual responses, not UI noise)
+                if clean_line and len(clean_line) > 10:
+                    # Skip lines that are still UI elements
+                    skip = False
+                    for pattern in skip_patterns:
+                        if re.search(pattern, clean_line):
+                            skip = True
+                            break
+
+                    if not skip:
+                        asyncio.run_coroutine_threadsafe(
+                            facilitator_client.send_message(
+                                content=clean_line,
+                                to="all",
+                                msg_type="chat",
+                            ),
+                            loop
+                        )
 
     wrapper = PTYWrapper(
         command=command,
         on_input=on_user_input,
-        on_output=None,  # DISABLE output forwarding to prevent echo loops with 'cat'
+        on_output=on_ai_output,  # Enable output forwarding with ANSI stripping
     )
 
     # Callback for when facilitator sends messages
