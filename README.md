@@ -59,6 +59,7 @@ Notes
 - **UI Implementation**: `docs/UI_IMPROVEMENTS.md` - Technical details
 - **Providers & Auth**: `docs/Providers_Auth_and_CLI.md` - API keys vs vendor CLIs, aggregated listing, providers doctor, and unlimited rounds controls
 - **Semhost API & Tests**: `docs/Semhost_API_Spec_and_TestPlan.md` - FastAPI backend surface, OpenAPI docs, and test plan/checklists
+- **Storage Layout**: `docs/STORAGE_LAYOUT.md` - external model storage + symlink conventions
 
 ## Local models in this repo
 
