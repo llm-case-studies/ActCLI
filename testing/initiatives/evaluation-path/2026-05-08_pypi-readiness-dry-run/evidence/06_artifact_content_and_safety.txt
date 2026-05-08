@@ -1,0 +1,17 @@
+$ "$VERIFY_DIR/venv/bin/python" - <<'PY'
+import json, os
+from pathlib import Path
+
+root = Path(os.environ["VERIFY_DIR"]) / "pricing-rnd"
+... (full safety probe)
+PY
+
+found ['README.md', 'audit.json', 'prompt.md', 'repro.sh', 'transcript.md', 'workpaper.md']
+missing []
+extra []
+participants [{'id': 'Pricing Actuary (local-demo)', 'local': True, 'version': 'demo-1.0'}, {'id': 'Reinsurance Buyer (local-demo)', 'local': True, 'version': 'demo-1.0'}, {'id': 'Risk Manager (local-demo)', 'local': True, 'version': 'demo-1.0'}]
+README.md contains synthetic: True
+prompt.md contains synthetic: True
+workpaper.md contains synthetic: True
+repro length 187
+ALL ASSERTIONS PASSED

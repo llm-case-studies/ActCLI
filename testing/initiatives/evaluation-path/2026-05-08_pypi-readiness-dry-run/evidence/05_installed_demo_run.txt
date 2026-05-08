@@ -1,0 +1,24 @@
+$ cd "$VERIFY_DIR"
+$ unset OPENAI_API_KEY ANTHROPIC_API_KEY GOOGLE_API_KEY PYTHONPATH
+$ "$VERIFY_DIR/venv/bin/actcli" demo pricing-rnd --out "$VERIFY_DIR/pricing-rnd"
+ActCLI Demo — pricing-rnd
+Running a synthetic, offline roundtable with three local-demo personas.
+No cloud keys, no network, no proprietary data.
+
+Round 1 complete — 3 responses
+Round 2 complete — 3 responses
+Synthesis: Agreements: you, one, r, synthetic, demo
+Disagreement score: 0.0
+
+Demo complete.
+Output: /tmp/tmp.Kv70Hd4U4C/pricing-rnd
+Open README.md → workpaper.md → transcript.md
+
+=== Files in pricing-rnd ===
+$ find "$VERIFY_DIR/pricing-rnd" -maxdepth 1 -type f -printf '%f\n' | sort
+README.md
+audit.json
+prompt.md
+repro.sh
+transcript.md
+workpaper.md
