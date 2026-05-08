@@ -42,14 +42,15 @@ git log --oneline --decorate --max-count=8
 find docs/expert-briefs/initiatives -path '*/active/*' -maxdepth 6 -type f | sort
 ```
 
-Current state after the first evaluation-path sprint:
+Current state after the first evaluation-path sprint, with the packaging dry-run
+lane now active:
 
 ```text
 initiative: evaluation-path
-active sprint: none
+active sprint: 2026-05-08_pypi-readiness-dry-run
 completed sprint: 2026-05-08_first-10-minutes-evaluation-kit
 validated command: actcli demo pricing-rnd --out out/evaluation/pricing-rnd
-next candidates: pypi-readiness-dry-run, landing-demo-script
+next candidate after package dry-run: landing-demo-script
 ```
 
 The intended product surface is:
@@ -62,3 +63,9 @@ The first sprint proved the evaluator experience: no proprietary data, no cloud
 keys, no network dependency, and inspectable artifacts that a Pricing R&D
 actuary can show colleagues. Future packaging or landing-page work should use
 that command as the smoke target.
+
+The active `pypi-readiness-dry-run` sprint does not publish to PyPI. It should
+prove that ActCLI can build wheel/sdist artifacts, validate package metadata,
+install the wheel into a fresh virtual environment outside the checkout, and run
+the same `actcli demo pricing-rnd` smoke target from the installed console
+script.

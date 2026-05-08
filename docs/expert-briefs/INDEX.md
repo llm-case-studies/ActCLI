@@ -11,4 +11,4 @@
 
 | Initiative | Status | Active sprint | Notes |
 |---|---|---|---|
-| `evaluation-path` | queued | none | First no-secrets offline demo path completed with PASS; next candidates are `pypi-readiness-dry-run` and `landing-demo-script` |
+| `evaluation-path` | active | `2026-05-08_pypi-readiness-dry-run` | Prove the validated demo command works from a built/installable package artifact before public release work |

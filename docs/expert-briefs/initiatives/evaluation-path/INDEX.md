@@ -4,14 +4,13 @@
 
 | Sprint | Branch | Status | Coding host | Validation host |
 |---|---|---|---|---|
-| none | - | - | - | - |
+| `2026-05-08_pypi-readiness-dry-run` | `feature/evaluation-path/pypi-readiness-dry-run` | ready for implementation | `Acer-HL` | `iMacDebian` |
 
 ## Queued
 
 | Sprint | Why queued | Depends on |
 |---|---|---|
-| `pypi-readiness-dry-run` | Prove the package can build/install cleanly from an artifact | evaluation kit command exists |
-| `landing-demo-script` | Turn the evaluation kit into a 5-minute demo script/video outline | evaluation kit output is stable |
+| `landing-demo-script` | Turn the evaluation kit into a 5-minute demo script/video outline | package dry-run confirms the install path |
 
 ## Completed
 
