@@ -11,7 +11,7 @@ and safety checks.
 ## Product Commit
 
 - branch: `feature/evaluation-path/pypi-readiness-dry-run`
-- commit: `bfaad06a5d09e5f36c032b85c3c778a913b10ac3`
+- commit: `117be0fc9f8fdcae3b1a4862226c2a56bf9c0109`
 
 ## Checks Run
 
