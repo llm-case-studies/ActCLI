@@ -1,0 +1,23 @@
+=== Demo Run Output ===
+╭──────────────────────────────────── Demo ────────────────────────────────────╮
+│ ActCLI Demo — pricing-rnd                                                    │
+│                                                                              │
+│ Running a synthetic, offline roundtable with three local-demo personas.      │
+│ No cloud keys, no network, no proprietary data.                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Round 1 complete — 3 responses
+Round 2 complete — 3 responses
+Synthesis: Agreements: peers, roundtable, small, on, prompt
+Disagreement score: 0.0
+
+Demo complete.
+Output: /tmp/tmp.BKr74Gp0CL/pricing-rnd
+Open README.md → workpaper.md → transcript.md
+=== Created Files ===
+README.md
+audit.json
+prompt.md
+repro.sh
+transcript.md
+workpaper.md
