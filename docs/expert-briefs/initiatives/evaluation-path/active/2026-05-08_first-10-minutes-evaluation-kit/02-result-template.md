@@ -11,7 +11,7 @@ f-string syntax in rounds.py (backslash in f-string incompatible with Python
 ## Product Commit
 
 - branch: `feature/evaluation-path/first-10-minutes-evaluation-kit`
-- commit: (pending)
+- commit: `364b657039e68f8810009fd87cdeed5b00ff0908`
 
 ## Checks Run
 
