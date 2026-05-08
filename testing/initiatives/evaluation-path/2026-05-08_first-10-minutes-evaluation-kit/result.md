@@ -2,25 +2,29 @@
 
 ## Verdict
 
-<!-- PASS, PASS with findings, FAIL, or BLOCKED -->
+PASS
 
 ## Product Commit Tested
 
-<!-- commit SHA from evidence/00_commit.txt -->
+be32010bdb433c26798dad0a5fe84a1c6a4a47a3
 
 ## Environment
 
-<!-- Python version, env path, key package versions. -->
+- Python: 3.13.5 (GCC 14.2.0)
+- Venv: /home/alex/.venvs/actcli-python
+- pytest: 9.0.3
+- typer: 0.25.1
+- rich: 15.0.0
 
 ## Checks
 
 | Check | Result |
 |---|---|
-| Demo integration tests |  |
-| Chat/transcript regression tests |  |
-| Direct demo run |  |
-| Artifact content and safety |  |
-| Cleanup |  |
+| Demo integration tests | 2 passed in 0.03s |
+| Chat/transcript regression tests | 2 passed in 0.07s |
+| Direct demo run | 6/6 expected files created |
+| Artifact content and safety | All assertions passed: 3 local/demo participants, synthetic marker present, no home paths in repro.sh |
+| Cleanup | Only validation evidence files modified |
 
 ## Evidence Files
 
@@ -34,4 +38,4 @@
 
 ## Notes
 
-<!-- Findings, blockers, or host-safety notes. -->
+All checks passed. Demo ran offline with synthetic participants, no network or API keys needed. Output kit is complete with all 6 expected artifacts, each containing the "synthetic" marker. repro.sh is free of local filesystem paths.
