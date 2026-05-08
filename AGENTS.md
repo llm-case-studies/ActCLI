@@ -9,6 +9,19 @@
   - `trust/` (hashing, repro, audit schema)
 - Tests: `tests/` with `unit/`, `integration/`, and fixtures under `tests/data/`.
 
+## Sprint-Pack Orchestration
+- Durable multi-agent work lives under `docs/expert-briefs/` and paired
+  validation requests live under `testing/initiatives/`.
+- Before coding, check `docs/expert-briefs/INDEX.md` and any
+  `docs/expert-briefs/initiatives/*/active/` sprint packs.
+- The first active product-evaluation lane is `evaluation-path`, which exists
+  to make ActCLI tryable by a Pricing R&D actuary in the first 10 minutes.
+- Current active sprint path:
+  `docs/expert-briefs/initiatives/evaluation-path/active/2026-05-08_first-10-minutes-evaluation-kit/`.
+- Roles follow the ActCLI-Bench pattern: orchestrator writes briefs and closes
+  sprints, implementer works inside the brief fence, validator independently
+  records evidence and verdict.
+
 ## Build, Test, and Development Commands
 - Python 3.11+ required.
 - Setup: `python -m venv .venv && source .venv/bin/activate && pip install -e .[dev]`
@@ -39,4 +52,3 @@
 - Secrets via env/OS keychain; never commit keys; prefer `keyring` storage.
 - Local config: `actcli.toml` at project root; user trust files under `~/.config/actcli/`.
 - Artifacts default to `out/` (e.g., `report.pdf`, `audit.json`, `repro.sh`, `seminar.md`).
-
