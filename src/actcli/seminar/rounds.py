@@ -115,7 +115,8 @@ class RoundOrchestrator:
         for rr in last:
             for e in rr.entries:
                 if e.text:
-                    lines.append(f"{e.alias}: {e.text[:200].replace('\n', ' ')}")
+                    text_snippet = e.text[:200].replace("\n", " ")
+                    lines.append(f"{e.alias}: {text_snippet}")
         return "\n".join(lines)
 
     # Execution entrypoint (signature only — implementation to be filled by Codex‑J)

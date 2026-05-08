@@ -10,7 +10,7 @@ from .adapters.anthropic import AnthropicAdapter
 from .adapters.codex_cli import CodexCLIAdapter
 from .adapters.gemini_cli import GeminiCLIAdapter
 from .adapters.claude_cli import ClaudeCLIAdapter
-from .adapters.gemini import GeminiAdapter
+# GeminiAdapter imported lazily inside from_spec (needs google-generativeai optional dep)
 from .adapters.echo import EchoAdapter
 from ..models.participant import ParticipantSpec
 
@@ -162,6 +162,8 @@ class AdapterFactory:
                         alias=alias or "google",
                         params=params,
                     )
+                from .adapters.gemini import GeminiAdapter
+
                 base = GeminiAdapter(model=spec.model_id or "gemini-1.5-flash-latest")
             elif provider == "echo":
                 base = EchoAdapter(name=alias or (spec.model_id or "echo"))

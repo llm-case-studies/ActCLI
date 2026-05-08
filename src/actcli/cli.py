@@ -489,5 +489,20 @@ def excel(
         raise SystemExit(2)
 
 
+@app.command()
+def demo(
+    scenario: str = typer.Argument(..., help="Demo scenario name (e.g., pricing-rnd)"),
+    out: str = typer.Option(
+        "out/evaluation/pricing-rnd",
+        "--out",
+        help="Output directory for evaluation kit",
+    ),
+) -> None:
+    """Run an offline, deterministic evaluation-kit demo (no cloud keys, no network)."""
+    from .commands.demo import run_demo
+
+    run_demo(scenario=scenario, out=out)
+
+
 def main() -> None:
     app()
