@@ -42,14 +42,14 @@ git log --oneline --decorate --max-count=8
 find docs/expert-briefs/initiatives -path '*/active/*' -maxdepth 6 -type f | sort
 ```
 
-Current active sprint:
+Current state after the first evaluation-path sprint:
 
 ```text
 initiative: evaluation-path
-sprint: 2026-05-08_first-10-minutes-evaluation-kit
-branch: feature/evaluation-path/first-10-minutes-evaluation-kit
-implementer host: Acer-HL
-validator host: iMacDebian
+active sprint: none
+completed sprint: 2026-05-08_first-10-minutes-evaluation-kit
+validated command: actcli demo pricing-rnd --out out/evaluation/pricing-rnd
+next candidates: pypi-readiness-dry-run, landing-demo-script
 ```
 
 The intended product surface is:
@@ -58,6 +58,7 @@ The intended product surface is:
 actcli demo pricing-rnd --out out/evaluation/pricing-rnd
 ```
 
-The point of the sprint is not packaging yet. It is to make the first evaluator
-experience concrete: no proprietary data, no cloud keys, no network dependency,
-and inspectable artifacts that a Pricing R&D actuary can show colleagues.
+The first sprint proved the evaluator experience: no proprietary data, no cloud
+keys, no network dependency, and inspectable artifacts that a Pricing R&D
+actuary can show colleagues. Future packaging or landing-page work should use
+that command as the smoke target.

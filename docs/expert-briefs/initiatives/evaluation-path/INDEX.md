@@ -4,7 +4,7 @@
 
 | Sprint | Branch | Status | Coding host | Validation host |
 |---|---|---|---|---|
-| `2026-05-08_first-10-minutes-evaluation-kit` | `feature/evaluation-path/first-10-minutes-evaluation-kit` | active | Acer-HL | iMacDebian |
+| none | - | - | - | - |
 
 ## Queued
 
@@ -17,4 +17,4 @@
 
 | Sprint | Branch | Verdict | Notes |
 |---|---|---|---|
-| none | - | - | - |
+| `2026-05-08_first-10-minutes-evaluation-kit` | `feature/evaluation-path/first-10-minutes-evaluation-kit` | PASS | `actcli demo pricing-rnd` evaluation kit validated on iMacDebian |

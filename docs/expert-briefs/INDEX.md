@@ -11,4 +11,4 @@
 
 | Initiative | Status | Active sprint | Notes |
 |---|---|---|---|
-| `evaluation-path` | active | `2026-05-08_first-10-minutes-evaluation-kit` | Build the first no-secrets, offline ActCLI demo path for Pricing R&D evaluators |
+| `evaluation-path` | queued | none | First no-secrets offline demo path completed with PASS; next candidates are `pypi-readiness-dry-run` and `landing-demo-script` |

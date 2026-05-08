@@ -14,10 +14,12 @@
   validation requests live under `testing/initiatives/`.
 - Before coding, check `docs/expert-briefs/INDEX.md` and any
   `docs/expert-briefs/initiatives/*/active/` sprint packs.
-- The first active product-evaluation lane is `evaluation-path`, which exists
-  to make ActCLI tryable by a Pricing R&D actuary in the first 10 minutes.
-- Current active sprint path:
-  `docs/expert-briefs/initiatives/evaluation-path/active/2026-05-08_first-10-minutes-evaluation-kit/`.
+- The first product-evaluation lane is `evaluation-path`, which exists to make
+  ActCLI tryable by a Pricing R&D actuary in the first 10 minutes.
+- If there is no active sprint, check
+  `docs/expert-briefs/initiatives/evaluation-path/INDEX.md` for queued
+  follow-ups. The first completed sprint validated
+  `actcli demo pricing-rnd`.
 - Roles follow the ActCLI-Bench pattern: orchestrator writes briefs and closes
   sprints, implementer works inside the brief fence, validator independently
   records evidence and verdict.
