@@ -14,3 +14,6 @@ sessions should not rediscover.
   work.
 - Validation probes should print enough context before assertions. A probe
   that only asserts can pass while leaving an empty evidence file.
+- Package dry-runs should install the built wheel into a fresh venv outside the
+  checkout and run the console script with `PYTHONPATH` unset. This catches
+  repo-layout assumptions that editable installs hide.

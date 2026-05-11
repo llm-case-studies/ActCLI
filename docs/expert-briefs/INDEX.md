@@ -11,4 +11,4 @@
 
 | Initiative | Status | Active sprint | Notes |
 |---|---|---|---|
-| `evaluation-path` | active | `2026-05-08_pypi-readiness-dry-run` | Prove the validated demo command works from a built/installable package artifact before public release work |
+| `evaluation-path` | queued | none | Evaluation kit and package dry-run both validated; next candidates are `portable-demo-repro-script` and `landing-demo-script` |
