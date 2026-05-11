@@ -1,0 +1,34 @@
+$ export VERIFY_DIR="/tmp/tmp.Kv70Hd4U4C"
+$ export WHEEL_PATH="/home/alex/Projects/ActCLI/dist/actcli-0.0.1-py3-none-any.whl"
+$ "$ACTCLI_PYTHON_BIN" -m venv "$VERIFY_DIR/venv"
+$ "$VERIFY_DIR/venv/bin/python" -m pip install --upgrade pip
+Successfully installed pip-26.1.1
+$ "$VERIFY_DIR/venv/bin/python" -m pip install "$WHEEL_PATH"
+Successfully installed actcli-0.0.1 ... (26 packages)
+
+=== pip show actcli ===
+Name: actcli
+Version: 0.0.1
+Summary: ActCLI — terminal-native actuarial workflows with multi-model roundtable chat
+Location: /tmp/tmp.Kv70Hd4U4C/venv/lib/python3.13/site-packages
+Requires: fastapi, httpx, platformdirs, pydantic, readchar, rich, typer, uvicorn, websockets
+
+=== actcli version ===
+ActCLI 0.0.1
+
+=== actcli doctor ===
+ActCLI • chat(roundtable) • MODE: HYBRID • v0.0.1
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                   Environment Checks                                         │
+│ ┏━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                      │
+│ ┃ Check          ┃ Status ┃ Detail                    ┃                      │
+│ ┡━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩                      │
+│ │ Python         │ OK     │ 3.13.5                    │                      │
+│ │ TTY            │ WARN   │ non-interactive           │                      │
+│ │ Color          │ WARN   │ None                      │                      │
+│ │ ollama         │ WARN   │ binary not found          │                      │
+│ │ OpenAI auth    │ INFO   │ OPENAI_API_KEY not set    │                      │
+│ │ Anthropic auth │ INFO   │ ANTHROPIC_API_KEY not set │                      │
+│ │ Google auth    │ INFO   │ GOOGLE_API_KEY not set    │                      │
+│ └────────────────┴────────┴───────────────────────────┘                      │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -42,14 +42,17 @@ git log --oneline --decorate --max-count=8
 find docs/expert-briefs/initiatives -path '*/active/*' -maxdepth 6 -type f | sort
 ```
 
-Current state after the first evaluation-path sprint:
+Current state after the first two evaluation-path sprints:
 
 ```text
 initiative: evaluation-path
 active sprint: none
-completed sprint: 2026-05-08_first-10-minutes-evaluation-kit
+completed sprints:
+  - 2026-05-08_first-10-minutes-evaluation-kit
+  - 2026-05-08_pypi-readiness-dry-run
 validated command: actcli demo pricing-rnd --out out/evaluation/pricing-rnd
-next candidates: pypi-readiness-dry-run, landing-demo-script
+package dry-run: PASS with findings
+next candidates: portable-demo-repro-script, landing-demo-script
 ```
 
 The intended product surface is:
@@ -62,3 +65,13 @@ The first sprint proved the evaluator experience: no proprietary data, no cloud
 keys, no network dependency, and inspectable artifacts that a Pricing R&D
 actuary can show colleagues. Future packaging or landing-page work should use
 that command as the smoke target.
+
+The `pypi-readiness-dry-run` sprint proved that ActCLI can build wheel/sdist
+artifacts, validate package metadata, install the wheel into a fresh virtual
+environment outside the checkout, and run the same `actcli demo pricing-rnd`
+smoke target from the installed console script.
+
+Known follow-up: the generated demo `repro.sh` still uses `python -m actcli`
+and says to run from the repo root. The installed `actcli` console script works,
+but before a real PyPI release the generated reproduction script should be made
+portable for installed-package users.

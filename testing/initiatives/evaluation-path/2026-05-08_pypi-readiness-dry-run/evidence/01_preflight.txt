@@ -1,0 +1,57 @@
+$ "$ACTCLI_PYTHON_BIN" - <<'PY'
+import sys
+print(sys.version)
+if sys.version_info < (3, 10):
+    raise SystemExit("ActCLI requires Python >=3.10; set ACTCLI_PYTHON_BIN.")
+PY
+3.13.5 (main, Jun 25 2025, 18:55:22) [GCC 14.2.0]
+
+$ python -m pip install --upgrade pip
+Successfully installed pip-26.1.1
+
+$ python -m pip install -e '.[dev]'
+Successfully installed SecretStorage-3.5.0 actcli-0.0.1 build-1.5.0 cffi-2.0.0 charset_normalizer-3.4.7 cryptography-48.0.0 docutils-0.22.4 id-1.6.1 jaraco.classes-3.4.0 jaraco.context-6.1.2 jaraco.functools-4.4.0 jeepney-0.9.0 keyring-25.7.0 more-itertools-11.0.2 nh3-0.3.5 pycparser-3.0 pyproject_hooks-1.2.0 readme-renderer-44.0 requests-2.33.1 requests-toolbelt-1.0.0 rfc3986-2.0.0 twine-6.2.0 urllib3-2.7.0
+
+=== pip show pytest ===
+Name: pytest
+Version: 9.0.3
+Summary: pytest: simple powerful testing with Python
+Location: /home/alex/.venvs/actcli-python/lib/python3.13/site-packages
+Requires: iniconfig, packaging, pluggy, pygments
+
+=== pip show build ===
+Name: build
+Version: 1.5.0
+Summary: A simple, correct Python build frontend
+Location: /home/alex/.venvs/actcli-python/lib/python3.13/site-packages
+Requires: packaging, pyproject_hooks
+
+=== pip show twine ===
+Name: twine
+Version: 6.2.0
+Summary: Collection of utilities for publishing packages on PyPI
+Location: /home/alex/.venvs/actcli-python/lib/python3.13/site-packages
+Requires: id, keyring, packaging, readme-renderer, requests, requests-toolbelt, rfc3986, rich, urllib3
+
+=== pip show hatchling ===
+WARNING: Package(s) not found: hatchling
+(Hatchling is not in [dev] extras; it is the PEP 517 build backend, handled by build isolation)
+
+$ git diff origin/main...HEAD --stat
+ docs/expert-briefs/INDEX.md                        |   2 +-
+ docs/expert-briefs/README.md                       |  13 +-
+ .../initiatives/evaluation-path/INDEX.md           |   5 +-
+ .../initiatives/evaluation-path/README.md          |  18 ++
+ .../00-opencode-kickoff.md                         |  77 +++++++
+ .../2026-05-08_pypi-readiness-dry-run/01-brief.md  | 129 +++++++++++
+ .../02-result-template.md                          |  68 ++++++
+ .../03-merge-note-template.md                      |  44 ++++
+ .../2026-05-08_pypi-readiness-dry-run/README.md    |  19 ++
+ pyproject.toml                                     |   2 +
+ .../evidence/.gitkeep                              |   1 +
+ .../2026-05-08_pypi-readiness-dry-run/request.md   | 254 +++++++++++++++++++++
+ .../2026-05-08_pypi-readiness-dry-run/result.md    |  46 ++++
+ 13 files changed, 671 insertions(+), 7 deletions(-)
+
+$ git status --short
+?? testing/initiatives/evaluation-path/2026-05-08_pypi-readiness-dry-run/evidence/00_commit.txt

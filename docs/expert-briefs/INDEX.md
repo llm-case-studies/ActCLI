@@ -11,4 +11,4 @@
 
 | Initiative | Status | Active sprint | Notes |
 |---|---|---|---|
-| `evaluation-path` | queued | none | First no-secrets offline demo path completed with PASS; next candidates are `pypi-readiness-dry-run` and `landing-demo-script` |
+| `evaluation-path` | queued | none | Evaluation kit and package dry-run both validated; next candidates are `portable-demo-repro-script` and `landing-demo-script` |

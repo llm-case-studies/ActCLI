@@ -1,0 +1,17 @@
+$ rm -rf dist build *.egg-info
+$ python -m build
+Successfully built actcli-0.0.1.tar.gz and actcli-0.0.1-py3-none-any.whl
+
+$ python -m twine check dist/*
+Checking dist/actcli-0.0.1-py3-none-any.whl: PASSED
+Checking dist/actcli-0.0.1.tar.gz: PASSED
+
+$ python - <<'PY'
+from pathlib import Path
+
+files = sorted(p.name for p in Path("dist").iterdir() if p.is_file())
+print("dist files", files)
+assert any(name.endswith(".whl") for name in files), files
+assert any(name.endswith(".tar.gz") for name in files), files
+PY
+dist files ['actcli-0.0.1-py3-none-any.whl', 'actcli-0.0.1.tar.gz']
