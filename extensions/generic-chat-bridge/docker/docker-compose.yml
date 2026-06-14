@@ -1,7 +1,15 @@
 version: '3.8'
 
+# Dev-only ActCLI chat-bridge harness.
+# Rocket.Chat and Zulip provide self-hosted Slack-like surfaces so the
+# browser extension can learn selectors and validate send/read behavior without
+# touching real third-party chat accounts. Do not treat this as production
+# infrastructure. Prefer on-demand starts and localhost-only port binds when
+# reviving it.
 services:
   rocketchat:
+    # Backed by the mongo service below. Existing MSI test data was tiny seeded
+    # harness content, not an operational chat archive.
     image: registry.rocket.chat/rocketchat/rocket.chat:latest
     restart: unless-stopped
     environment:
@@ -15,6 +23,9 @@ services:
       - mongo
 
   mongo:
+    # Rocket.Chat requires a replica set for oplog support. If this container is
+    # marked unhealthy while Rocket.Chat works, inspect the healthcheck before
+    # assuming Mongo is down.
     image: mongo:6
     restart: unless-stopped
     command: mongod --oplogSize 128 --replSet rs0
@@ -27,6 +38,8 @@ services:
       retries: 5
 
   zulip:
+    # Optional second chat surface. Requires administrator configuration before
+    # use; otherwise it exits and restart-loops.
     image: zulip/docker-zulip:7.4-0
     restart: unless-stopped
     environment:
@@ -50,4 +63,3 @@ services:
 volumes:
   mongo-data: {}
   zulip-db: {}
-
